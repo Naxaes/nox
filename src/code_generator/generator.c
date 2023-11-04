@@ -7,7 +7,7 @@ Bytecode generate_code(TypedAst ast) {
     u8* instructions = malloc(sizeof(Instruction) * 1024);
     size_t count = 0;
 
-    size_t current_register = 0;
+    u8 current_register = 0;
 
     Node first = ast.nodes[0];
     switch (first.kind) {
