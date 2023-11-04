@@ -1,7 +1,6 @@
 #include "interpreter.h"
 
 #include <stdlib.h>
-#include <printf.h>
 #include <stdio.h>
 
 

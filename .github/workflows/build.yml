@@ -1,4 +1,4 @@
-name: Build and Run CMake Application on Windows and Ubuntu
+name: Build and Run
 
 on:
   push:
