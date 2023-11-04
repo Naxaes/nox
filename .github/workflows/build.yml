@@ -1,4 +1,4 @@
-name: Build and Run CMake Application on Windows and Ubuntu
+name: Build and Run
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
             name: "Ubuntu/18.04/Static/X64/Release",
             os: ubuntu-latest,
             config: Release,
-            cmake_extra_args: "-DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10",
+            cmake_extra_args: "-DCMAKE_C_COMPILER=/usr/bin/gcc-10",
           }
           - {
             name: "MacOSX/Static/X64/Release",
@@ -37,16 +37,24 @@ jobs:
           }
     steps:
       - uses: actions/checkout@v2
-      - name: Create Work Dir
+
+      - name: Create build directory
         run: mkdir build
+
       - name: Configure
         working-directory: ./build
-        run: |
-          cmake .. ${{ matrix.config.cmake_extra_args }} -DCMAKE_BUILD_TYPE=${{ matrix.config.config }}
+        run: cmake .. ${{ matrix.config.cmake_extra_args }} -DCMAKE_BUILD_TYPE=${{ matrix.config.config }}
+
       - name: Build
         working-directory: ./build
         run: cmake --build . -j --config ${{ matrix.config.config }}
-      - name: run
-        working-directory: ./build
-        run: ./nox
 
+      - name: Run Windows
+        if: ${{ matrix.config.os == 'windows-latest' }}
+        working-directory: .
+        run: build\Release\nox.exe
+
+      - name: Run Unix
+        if: ${{ matrix.config.os != 'windows-latest' }}
+        working-directory: .
+        run: ./build/nox

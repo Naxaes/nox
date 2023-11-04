@@ -7,7 +7,7 @@ typedef u32 NodeId;
 
 typedef struct {
     TokenArray tokens;
-    size_t     current_token;
+    TokenId    current_token;
     Node*      nodes;
     NodeId     node_count;
 } Parser;

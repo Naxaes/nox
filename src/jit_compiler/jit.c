@@ -1,7 +1,8 @@
 #include "jit.h"
 
+#include "os/memory.h"
+
 #include <stdio.h>
-#include <sys/mman.h>
 #include <stdlib.h>
 
 
@@ -67,18 +68,7 @@ JitFunction jit_compile_aarch64(Bytecode code) {
         }
     }
 
-    void* memory = mmap(NULL, code.size, PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-    if (memory == MAP_FAILED) {
-        perror("mmap");
-        return NULL;
-    }
-
-    memcpy(memory, machine_code, code.size);
-    if (mprotect(memory, code.size, PROT_READ|PROT_EXEC) == -1) {
-        perror("mprotect");
-        return NULL;
-    }
-
+    void* memory = memory_map_executable(machine_code, size * sizeof(*machine_code));
     return (JitFunction) memory;
 }
 
@@ -144,18 +134,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
         }
     }
 
-    void* memory = mmap(NULL, code.size, PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-    if (memory == MAP_FAILED) {
-        perror("mmap");
-        return NULL;
-    }
-
-    memcpy(memory, machine_code, code.size);
-    if (mprotect(memory, code.size, PROT_READ|PROT_EXEC) == -1) {
-        perror("mprotect");
-        return NULL;
-    }
-
+    void* memory = memory_map_executable(machine_code, size * sizeof(*machine_code));
     return (JitFunction) memory;
 }
 

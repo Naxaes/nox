@@ -3,6 +3,8 @@
 
 
 int type_check_literal(UntypedAst ast, NodeLiteral literal) {
+    (void) ast;
+    (void) literal;
     return 1;
 }
 
