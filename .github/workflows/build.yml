@@ -47,6 +47,6 @@ jobs:
         working-directory: ./build
         run: cmake --build . -j --config ${{ matrix.config.config }}
       - name: run
-        working-directory: ./build
-        run: ./nox
+        working-directory: .
+        run: ./build/nox
 
