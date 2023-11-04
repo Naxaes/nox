@@ -49,6 +49,12 @@ jobs:
         working-directory: ./build
         run: cmake --build . -j --config ${{ matrix.config.config }}
 
-      - name: run
+      - name: Run Windows
+        if: ${{ matrix.config.os == 'windows-latest' }}
+        working-directory: .
+        run: ./build/nox
+
+      - name: Run Unix
+        if: ${{ matrix.config.os != 'windows-latest' }}
         working-directory: .
         run: ./build/nox
