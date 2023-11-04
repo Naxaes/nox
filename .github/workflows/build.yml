@@ -1,0 +1,46 @@
+name: Build and Run CMake Application on Windows and Ubuntu
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+#      - name: Setup MSVC
+#        if: matrix.os == 'windows-latest'
+#        uses: marketplace/actions/setup-msvc@v1
+
+#      - name: Install CMake
+#        run: |
+#          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+#            choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+#          else
+#            sudo apt-get update -q
+#            sudo apt-get install -y cmake
+#          fi
+
+      - name: Configure and build
+        run: |
+          mkdir -p build && cd build
+          cmake ..
+          cmake --build .
+
+      - name: Run the application
+        run: |
+          cd build
+          ./nox
