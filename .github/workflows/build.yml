@@ -52,7 +52,7 @@ jobs:
       - name: Run Windows
         if: ${{ matrix.config.os == 'windows-latest' }}
         working-directory: .
-        run: ./build/nox
+        run: build\Release\nox.exe
 
       - name: Run Unix
         if: ${{ matrix.config.os != 'windows-latest' }}
