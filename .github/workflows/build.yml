@@ -10,37 +10,43 @@ env:
   BUILD_TYPE: Release
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-
+  Build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-
+        config:
+          - {
+            name: "Windows/Static/X64/Release",
+            os: windows-latest,
+            config: Release,
+            args: -G "Visual Studio 16 2019" -A x64,
+          }
+          - {
+            name: "Ubuntu/18.04/Static/X64/Release",
+            os: ubuntu-latest,
+            config: Release,
+            cmake_extra_args: "-DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10",
+          }
+          - {
+            name: "MacOSX/Static/X64/Release",
+            os: macos-latest,
+            config: Release,
+            args: "",
+          }
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-#      - name: Setup MSVC
-#        if: matrix.os == 'windows-latest'
-#        uses: marketplace/actions/setup-msvc@v1
-
-#      - name: Install CMake
-#        run: |
-#          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-#            choco install cmake --installargs 'ADD_CMAKE_TO_PATH=System'
-#          else
-#            sudo apt-get update -q
-#            sudo apt-get install -y cmake
-#          fi
-
-      - name: Configure and build
+      - uses: actions/checkout@v2
+      - name: Create Work Dir
+        run: mkdir build
+      - name: Configure
+        working-directory: ./build
         run: |
-          mkdir -p build && cd build
-          cmake ..
-          cmake --build .
+          cmake .. ${{ matrix.config.cmake_extra_args }} -DCMAKE_BUILD_TYPE=${{ matrix.config.config }}
+      - name: Build
+        working-directory: ./build
+        run: cmake --build . -j --config ${{ matrix.config.config }}
+      - name: run
+        working-directory: ./build
+        run: ./nox
 
-      - name: Run the application
-        run: |
-          cd build
-          ./nox
