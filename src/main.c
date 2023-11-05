@@ -13,8 +13,8 @@
 
 int main(void) {
 
-    Str source = read_file("examples/single_digit.nox");
-    if (source.data == NULL) {
+    Str source = read_file("examples/adding.nox");
+    if (str_is_empty(source)) {
         fprintf(stderr, "Failed to read file\n");
         return 1;
     }
@@ -45,8 +45,8 @@ int main(void) {
 
     JitFunction jitted_function = jit_compile(code);
     if (jitted_function) {
-        i64 result = jitted_function();
-        printf("[INFO]: JIT result: %lld\n", result);
+        u64 result = jitted_function();
+        printf("[INFO]: JIT result: %llu\n", result);
     } else {
         printf("[INFO]: Failed to JIT compile\n");
     }

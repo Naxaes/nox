@@ -1,60 +1,54 @@
 name: Build and Run
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 env:
-  BUILD_TYPE: Release
+  CMAKE_BUILD_TYPE: Release
 
 jobs:
-  Build:
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
+  build:
     strategy:
       fail-fast: false
       matrix:
         config:
           - {
-            name: "Windows/Static/X64/Release",
+            name: "Windows x86-64",
             os: windows-latest,
-            config: Release,
-            args: -G "Visual Studio 16 2019" -A x64,
+            run: build\Release\nox.exe,
           }
           - {
-            name: "Ubuntu/18.04/Static/X64/Release",
+            name: "Ubuntu x86_64",
             os: ubuntu-latest,
-            config: Release,
-            cmake_extra_args: "-DCMAKE_C_COMPILER=/usr/bin/gcc-10",
+            run: ./build/nox,
           }
           - {
-            name: "MacOSX/Static/X64/Release",
+            name: "MacOSX x86_64",
             os: macos-latest,
-            config: Release,
-            args: "",
+            run: ./build/nox,
           }
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
     steps:
+      # Fetch our repository.
       - uses: actions/checkout@v2
 
+      # Create our build directory.
       - name: Create build directory
         run: mkdir build
 
+      # Change to our build directory and run cmake.
       - name: Configure
         working-directory: ./build
-        run: cmake .. ${{ matrix.config.cmake_extra_args }} -DCMAKE_BUILD_TYPE=${{ matrix.config.config }}
+        run: cmake ..
 
+      # Build the project.
       - name: Build
         working-directory: ./build
-        run: cmake --build . -j --config ${{ matrix.config.config }}
+        run: cmake --build .
 
-      - name: Run Windows
-        if: ${{ matrix.config.os == 'windows-latest' }}
+      # Change to our project root run the executable.
+      - name: Run
         working-directory: .
-        run: build\Release\nox.exe
-
-      - name: Run Unix
-        if: ${{ matrix.config.os != 'windows-latest' }}
-        working-directory: .
-        run: ./build/nox
+        run: ${{ matrix.config.run }}

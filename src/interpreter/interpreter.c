@@ -39,6 +39,11 @@ i64 interpret(Bytecode code) {
 
                 interpreter.registers[register_index] = value;
             } break;
+            case Instruction_Add: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] += interpreter.registers[source];
+            } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];
                 return value;
