@@ -16,14 +16,14 @@ jobs:
           - {
             name: "Windows x86-64",
             os: windows-latest,
-            run: build\nox.exe,
+            run: build\Release\nox.exe,
             docker: winget install DockerDesktop && docker\run.bat,
           }
           - {
             name: "Ubuntu x86_64",
             os: ubuntu-latest,
             run: ./build/nox,
-            docker: sudo apt-get install docker.io && sudo service docker start && ./docker/run.sh,
+            docker: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install docker.io && sudo service docker start && ./docker/run.sh,
           }
           - {
             name: "MacOSX x86_64",
@@ -44,12 +44,12 @@ jobs:
       # Change to our build directory and run cmake.
       - name: Configure
         working-directory: ./build
-        run: cmake ..
+        run: cmake .. -DCMAKE_BUILD_TYPE=Release
 
       # Build the project.
       - name: Build
         working-directory: ./build
-        run: cmake --build .
+        run: cmake --build . -j --config Release
 
       # Change to our project root run the executable.
       - name: Run
