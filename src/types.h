@@ -17,3 +17,6 @@ typedef float f32;
 typedef double f64;
 
 typedef ptrdiff_t isize;
+
+
+#define static_assert _Static_assert

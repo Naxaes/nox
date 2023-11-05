@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "parser.h"
 
-typedef u32 NodeId;
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 
 
 typedef struct {
@@ -12,37 +12,131 @@ typedef struct {
     NodeId     node_count;
 } Parser;
 
-Token current(Parser* parser) {
+static inline Token current(Parser* parser) {
     return parser->tokens.tokens[parser->current_token];
 }
 
-TokenId advance(Parser* parser) {
+static inline TokenId advance(Parser* parser) {
     return parser->current_token++;
 }
 
-NodeId add_node(Parser* parser, Node node) {
+static inline NodeId add_node(Parser* parser, Node node) {
     NodeId id = parser->node_count++;
     parser->nodes[id] = node;
     return id;
 }
 
+static inline NodeId reserve_node(Parser* parser) {
+    NodeId id = parser->node_count++;
+    return id;
+}
 
-NodeId parse_literal(Parser* parser) {
+static inline NodeId set_node(Parser* parser, NodeId id, Node node) {
+    parser->nodes[id] = node;
+    return id;
+}
+
+
+static NodeId number(Parser*);
+static NodeId binary(Parser* parser, NodeId left);
+
+
+typedef enum {
+    Precedence_None,
+    Precedence_Assignment,  // =
+    Precedence_Or,          // or
+    Precedence_And,         // and
+    Precedence_Equality,    // == !=
+    Precedence_Comparison,  // < > <= >=
+    Precedence_Term,        // + -
+    Precedence_Factor,      // * /
+    Precedence_Unary,       // ! -
+    Precedence_Call,        // . ()
+    Precedence_Primary
+} Precedence;
+
+typedef NodeId (*ParsePrefixFn)(Parser*);
+typedef NodeId (*ParseInfixFn)(Parser*, NodeId);
+typedef struct {
+    ParsePrefixFn prefix;
+    ParseInfixFn  infix;
+    Precedence precedence;
+} ParseRule;
+
+ParseRule rules[] = {
+        [Token_Invalid] =   { NULL,     NULL,       Precedence_None},
+        [Token_Number]  =   { number,   NULL,       Precedence_None},
+        [Token_Plus]    =   { NULL,     binary,     Precedence_Factor},
+        [Token_Eof]     =   { NULL,     NULL,       Precedence_None},
+};
+
+static NodeId precedence(Parser* parser, Precedence precedence) {
     Token token = current(parser);
-    switch (token) {
-        case Token_Literal: {
-            Str repr = lexer_repr_of(parser->tokens, parser->current_token);
-            i64 value = strtoll(repr.data, NULL, 10);
-            advance(parser);
 
-            NodeLiteral literal = { NodeKind_Literal, .value.integer = value };
-            return add_node(parser, (Node) { .literal = literal });
+    ParsePrefixFn prefix = rules[token].prefix;
+    if (prefix == NULL) {
+        fprintf(stderr, "Expect expression\n");
+        return 0;
+    }
+
+    NodeId left = prefix(parser);
+
+    while (1) {
+        token = current(parser);
+        Precedence next_precedence = rules[token].precedence;
+        if (precedence > next_precedence) {
+            break;
+        }
+
+        ParseInfixFn infix = rules[token].infix;
+        left = infix(parser, left);
+    }
+
+    return left;
+}
+
+static NodeId number(Parser* parser) {
+    assert(current(parser) == Token_Number && "Expected number token");
+
+    Str repr  = lexer_repr_of(parser->tokens, parser->current_token);
+    i64 value = strtoll(repr.data, NULL, 10);
+    advance(parser);
+
+    NodeLiteral literal = { NodeKind_Literal, .type=Literal_Integer, .value.integer = value };
+    return add_node(parser, (Node) { .literal = literal });
+}
+
+static NodeId binary(Parser* parser, NodeId left) {
+    Token token = current(parser);
+    NodeBinary binary;
+
+    switch (token) {
+        case Token_Plus: {
+            binary = (NodeBinary) {
+                NodeKind_Binary,
+                .left=left,
+                .right=0,
+                .op='+'
+            };
         } break;
         default: {
-            fprintf(stderr, "Invalid token literal: '%d'\n", token);
-            return 0;
-        } break;
+            fprintf(stderr, "Unexpected path\n");
+            return NODE_ID_INVALID;
+        }
     }
+    NodeId id = reserve_node(parser);
+
+    advance(parser);
+
+    ParseRule rule = rules[token];
+    binary.right = precedence(parser, (Precedence)(rule.precedence + 1));
+
+    return set_node(parser, id, (Node) { .binary = binary });
+}
+
+
+static NodeId expression(Parser* parser) {
+    return precedence(parser, Precedence_Assignment);
 }
 
 
@@ -54,24 +148,31 @@ UntypedAst parse(TokenArray tokens) {
         .node_count = 0,
     };
 
+    // Reserve one slot so that any references to 0 are invalid,
+    // as no nodes should be able to reference a start node.
+    add_node(&parser, (Node) { NodeKind_Invalid });
+    NodeId start = 0;
+
     while (parser.current_token < tokens.size) {
         Token token = current(&parser);
+
         switch (token) {
+            case Token_Plus:
             case Token_Invalid: {
                 fprintf(stderr, "Unknown token: '%d'\n", token);
                 free(parser.nodes);
-                return (UntypedAst) { NULL };
+                return (UntypedAst) { NULL, 0 };
             } break;
-            case Token_Literal: {
-                parse_literal(&parser);
+            case Token_Number: {
+                start = expression(&parser);
             } break;
             case Token_Eof: {
-                return (UntypedAst) { parser.nodes };
+                return (UntypedAst) { parser.nodes, start };
             }
         }
     }
 
     fprintf(stderr, "Unexpected end of token stream\n");
     free(parser.nodes);
-    return (UntypedAst) { NULL };
+    return (UntypedAst) { NULL, 0 };
 }

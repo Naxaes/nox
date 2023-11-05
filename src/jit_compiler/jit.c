@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 
 u32 aarch64_mov(u32 dest, u64 value) {
@@ -18,6 +19,28 @@ u32 aarch64_mov(u32 dest, u64 value) {
     u32 op  = 0b11010010100000000000000000000000;
 
     u32 inst = op | imm | rd;
+    return inst;
+}
+
+u32 aarch64_add(u32 dest, u32 source) {
+    // ADD Xd, Xn, Xm
+    u32 rd  = (dest   & 0b11111) << 0;
+    u32 rn  = (dest   & 0b11111) << 5;
+    u32 rm  = (source & 0b11111) << 16;
+    u32 op  =  0b10001011000000000000000000000000;
+
+    u32 inst = op | rm | rn | rd;
+    return inst;
+}
+
+u32 aarch64_mul(u32 dest, u32 source) {
+    // MUL Xd, Xn, Xm
+    u32 rd  = (dest   & 0b11111) << 0;
+    u32 rn  = (dest   & 0b11111) << 5;
+    u32 rm  = (source & 0b11111) << 16;
+    u32 op  =  0b10011011000000000111110000000000;
+
+    u32 inst = op | rm | rn | rd;
     return inst;
 }
 
@@ -57,13 +80,16 @@ JitFunction jit_compile_aarch64(Bytecode code) {
                     return NULL;
                 machine_code[size++] = inst;
             } break;
+            case Instruction_Add: {
+                // ADD Xd, Xn, Xm
+                u8 reg0  = code.instructions[++i];
+                u8 reg1  = code.instructions[++i];
+                u32 inst = aarch64_add(reg0, reg1);
+                machine_code[size++] = inst;
+            } break;
             case Instruction_Exit: {
                 u32 inst = aarch64_ret();
                 machine_code[size++] = inst;
-            } break;
-            default: {
-                fprintf(stderr, "Unknown instruction\n");
-                return NULL;
             } break;
         }
     }
@@ -83,6 +109,11 @@ JitFunction jit_compile_aarch64(Bytecode code) {
     (value >> 8)  & 0xFF,               \
     (value >> 16) & 0xFF,               \
     (value >> 24) & 0xFF,               \
+}
+
+#define x86_64_add(reg0, reg1) {        \
+    0x01,                               \
+    0xc0 + ((reg0 & 0b111) << 3) + (reg1 & 0b111), \
 }
 
 #define x86_64_ret() {                  \
@@ -123,6 +154,14 @@ JitFunction jit_compile_x86_64(Bytecode code) {
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;
+            case Instruction_Add: {
+                // addl %ebx %eax
+                u8 src   = code.instructions[++i];
+                u8 dst   = code.instructions[++i];
+                u8 inst[] = x86_64_add(dst, src);
+                memcpy(&machine_code[size], inst, sizeof(inst));
+                size += sizeof(inst);
+            } break;
             case Instruction_Exit: {
                 u8 inst = x86_64_ret();
                 machine_code[size++] = inst;
@@ -143,13 +182,22 @@ JitFunction jit_compile_x86_64(Bytecode code) {
 JitFunction jit_compile(Bytecode code) {
 #if defined(__x86_64__)
     printf("[INFO]: JIT compiling for x86_64\n");
-    return jit_compile_x86_64(code);
+    JitFunction function =  jit_compile_x86_64(code);
 #elif defined(__aarch64__)
     printf("[INFO]: JIT compiling for aarch64\n");
-    return jit_compile_aarch64(code);
+    JitFunction function = jit_compile_aarch64(code);
 #else
     return NULL;
 #endif
+
+#ifdef OUTPUT_JIT
+    FILE* file = fopen(OUTPUT_JIT, "wb");
+    assert(file != NULL && "Failed to open " OUTPUT_JIT);
+    fwrite((void*)function, code.size, 1, file);
+    fclose(file);
+#endif
+
+    return function;
 }
 
 
