@@ -187,6 +187,7 @@ JitFunction jit_compile(Bytecode code) {
     printf("[INFO]: JIT compiling for aarch64\n");
     JitFunction function = jit_compile_aarch64(code);
 #else
+    JitFunction function = NULL;
     return NULL;
 #endif
 
