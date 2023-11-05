@@ -106,7 +106,7 @@ TokenArray lexer_lex(const char* source) {
                     const char* end = source;
 
 
-                    Str string = (Str) { (ssize_t)(end-start), start };
+                    Str string = (Str) { (size_t)(end-start), start };
                     lexer.representations[lexer.count] = string;
 
                     IdentId ident = intern_string(&lexer, string);

@@ -10,11 +10,10 @@ extern "C" {
 #include "lexer/lexer.h"
 }
 
-static const char* source = "34 + 34 + 1";
-
 
 TEST(LexerTest, TokenizationTest) {
     // Prepare test input
+    static const char* source = "34 + 34 + 1";
     TokenArray token_array = lexer_lex(source);
 
     std::vector<Token> tokens(token_array.tokens, token_array.tokens+token_array.size);
