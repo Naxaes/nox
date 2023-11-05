@@ -16,20 +16,20 @@ jobs:
           - {
             name: "Windows x86-64",
             os: windows-latest,
-            run: build\Release\nox.exe,
+            run: build\nox.exe,
             docker: winget install DockerDesktop && docker\run.bat,
           }
           - {
             name: "Ubuntu x86_64",
             os: ubuntu-latest,
             run: ./build/nox,
-            docker: apt-get install docker.io && sudo service docker status && ./docker/run.sh,
+            docker: sudo apt-get install docker.io && sudo service docker start && ./docker/run.sh,
           }
           - {
             name: "MacOSX x86_64",
             os: macos-latest,
             run: ./build/nox,
-            docker: brew install docker && sudo systemctl start docker && ./docker/run.sh,
+            docker: brew install docker && brew install colima && colima start && ./docker/run.sh,
           }
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
