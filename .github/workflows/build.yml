@@ -56,5 +56,8 @@ jobs:
         working-directory: .
         run: ${{ matrix.config.run }}
 
+      - name: Docker
+        uses: .github/workflows/ # Uses an action in the root directory
+
 #      - name: Run docker
 #        run: ${{ matrix.config.docker }}
