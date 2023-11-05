@@ -20,10 +20,10 @@ static inline TokenId advance(Parser* parser) {
     return parser->current_token++;
 }
 
-static inline NodeId add_node(Parser* parser, Node node) {
+static inline Node* add_node(Parser* parser, Node node) {
     NodeId id = parser->node_count++;
     parser->nodes[id] = node;
-    return id;
+    return &parser->nodes[id];
 }
 
 static inline NodeId reserve_node(Parser* parser) {
@@ -31,14 +31,14 @@ static inline NodeId reserve_node(Parser* parser) {
     return id;
 }
 
-static inline NodeId set_node(Parser* parser, NodeId id, Node node) {
+static inline Node* set_node(Parser* parser, NodeId id, Node node) {
     parser->nodes[id] = node;
-    return id;
+    return &parser->nodes[id];
 }
 
 
-static NodeId number(Parser*);
-static NodeId binary(Parser* parser, NodeId left);
+static Node* number(Parser*);
+static Node* binary(Parser* parser, Node* left);
 
 
 typedef enum {
@@ -55,8 +55,8 @@ typedef enum {
     Precedence_Primary
 } Precedence;
 
-typedef NodeId (*ParsePrefixFn)(Parser*);
-typedef NodeId (*ParseInfixFn)(Parser*, NodeId);
+typedef Node* (*ParsePrefixFn)(Parser*);
+typedef Node* (*ParseInfixFn)(Parser*, Node*);
 typedef struct {
     ParsePrefixFn prefix;
     ParseInfixFn  infix;
@@ -70,7 +70,7 @@ ParseRule rules[] = {
         [Token_Eof]     =   { NULL,     NULL,       Precedence_None},
 };
 
-static NodeId precedence(Parser* parser, Precedence precedence) {
+static Node* precedence(Parser* parser, Precedence precedence) {
     Token token = current(parser);
 
     ParsePrefixFn prefix = rules[token].prefix;
@@ -79,7 +79,7 @@ static NodeId precedence(Parser* parser, Precedence precedence) {
         return 0;
     }
 
-    NodeId left = prefix(parser);
+    Node* left = prefix(parser);
 
     while (1) {
         token = current(parser);
@@ -95,18 +95,18 @@ static NodeId precedence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-static NodeId number(Parser* parser) {
+static Node* number(Parser* parser) {
     assert(current(parser) == Token_Number && "Expected number token");
 
-    Str repr  = lexer_repr_of(parser->tokens, parser->current_token);
-    i64 value = strtoll(repr.data, NULL, 10);
+    const char* repr = lexer_repr_of(parser->tokens, parser->current_token);
+    i64 value = strtoll(repr, NULL, 10);
     advance(parser);
 
     NodeLiteral literal = { NodeKind_Literal, .type=Literal_Integer, .value.integer = value };
     return add_node(parser, (Node) { .literal = literal });
 }
 
-static NodeId binary(Parser* parser, NodeId left) {
+static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
     NodeBinary binary;
 
@@ -121,7 +121,7 @@ static NodeId binary(Parser* parser, NodeId left) {
         } break;
         default: {
             fprintf(stderr, "Unexpected path\n");
-            return NODE_ID_INVALID;
+            return NULL;
         }
     }
     NodeId id = reserve_node(parser);
@@ -135,7 +135,7 @@ static NodeId binary(Parser* parser, NodeId left) {
 }
 
 
-static NodeId expression(Parser* parser) {
+static Node* expression(Parser* parser) {
     return precedence(parser, Precedence_Assignment);
 }
 
@@ -151,7 +151,7 @@ UntypedAst parse(TokenArray tokens) {
     // Reserve one slot so that any references to 0 are invalid,
     // as no nodes should be able to reference a start node.
     add_node(&parser, (Node) { NodeKind_Invalid });
-    NodeId start = 0;
+    Node* start = 0;
 
     while (parser.current_token < tokens.size) {
         Token token = current(&parser);

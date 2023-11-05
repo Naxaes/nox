@@ -30,4 +30,4 @@ set(SOURCES
     src/os/memory.c)
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)
-target_compile_definitions(nox PRIVATE OUTPUT_JIT="jit.bin")
+#target_compile_definitions(nox PRIVATE OUTPUT_JIT="assembly/jit.bin")

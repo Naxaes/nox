@@ -35,22 +35,21 @@ Register mov_add(Generator* generator, Register dest, Register source) {
 }
 
 
-Register generate_for_expression(Generator* generator, TypedAst ast, NodeId id) {
-    Node node = ast.nodes[id];
-    switch (node.kind) {
+Register generate_for_expression(Generator* generator, TypedAst ast, Node* node) {
+    switch (node->kind) {
         case NodeKind_Invalid:
             assert(0 && "Invalid node kind");
         case NodeKind_Literal:
-            return mov_imm64(generator, node.literal);
+            return mov_imm64(generator, node->literal);
         case NodeKind_Binary: {
-            Register dest   = generate_for_expression(generator, ast, node.binary.left);
-            Register source = generate_for_expression(generator, ast, node.binary.right);
-            switch (node.binary.op) {
+            Register dest   = generate_for_expression(generator, ast, node->binary.left);
+            Register source = generate_for_expression(generator, ast, node->binary.right);
+            switch (node->binary.op) {
                 case '+': {
                     return mov_add(generator, dest, source);
                 } break;
                 default: {
-                    fprintf(stderr, "Unknown binary operator: '%c'\n", node.binary.op);
+                    fprintf(stderr, "Unknown binary operator: '%c'\n", node->binary.op);
                     assert(0 && "Invalid node kind");
                     return 0;
                 } break;
@@ -67,16 +66,16 @@ Bytecode generate_code(TypedAst ast) {
         .current_register = 0,
     };
 
-    Node first = ast.nodes[ast.start];
-    switch (first.kind) {
+    Node* first = ast.start;
+    switch (first->kind) {
         case NodeKind_Invalid: {
-            fprintf(stderr, "Unknown node kind: '%d'\n", first.kind);
+            fprintf(stderr, "Unknown node kind: '%d'\n", first->kind);
             free(generator.instructions);
             return (Bytecode) { NULL, 0 };
         } break;
         case NodeKind_Literal:
         case NodeKind_Binary: {
-            generate_for_expression(&generator, ast, ast.start);
+            generate_for_expression(&generator, ast, first);
         } break;
     }
 

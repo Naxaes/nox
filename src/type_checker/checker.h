@@ -9,7 +9,7 @@ typedef u32 TypeId;
 typedef struct {
     Node*   nodes;
     TypeId* types;
-    NodeId  start;
+    Node*   start;
 } TypedAst;
 
 TypedAst type_check(UntypedAst ast);

@@ -28,7 +28,7 @@ typedef struct {
 TokenArray lexer_lex(const char* source);
 
 /// Get the textual representation of a token.
-Str lexer_repr_of(TokenArray tokens, TokenId id);
+const char* lexer_repr_of(TokenArray tokens, TokenId id);
 
 
 

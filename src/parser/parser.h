@@ -7,6 +7,8 @@
 typedef u32 NodeId;
 #define NODE_ID_INVALID ((NodeId)0)
 
+typedef union Node Node;
+
 typedef enum {
     NodeKind_Invalid,
     NodeKind_Literal,
@@ -27,20 +29,20 @@ typedef struct {
 
 typedef struct {
     NodeKind kind;
-    NodeId   left;
-    NodeId   right;
+    Node*    left;
+    Node*    right;
     char     op;
 } NodeBinary;
 
-typedef union {
+union Node {
     NodeKind kind;
     NodeLiteral literal;
     NodeBinary  binary;
-} Node;
+};
 
 typedef struct {
     Node* nodes;
-    NodeId start;
+    Node* start;
 } UntypedAst;
 
 UntypedAst parse(TokenArray tokens);

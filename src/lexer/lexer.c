@@ -30,16 +30,17 @@ IdentId intern_string(Lexer* lexer, Str string) {
         // which means that the string is not interned yet.
         if (offset == 0) {
             offset = lexer->interned_string_size;
-            size_t header_size = sizeof(string.size);
-            memcpy(lexer->interned_strings + lexer->interned_string_size, &string.size, header_size);
-            memcpy(lexer->interned_strings + lexer->interned_string_size + header_size, string.data, string.size);
-            memset(lexer->interned_strings + lexer->interned_string_size + header_size + string.size, 0, 1);
-            lexer->interned_string_size += header_size + string.size + 1;
+
+            // Copy over the data and a null pointer at the end.
+            memcpy(lexer->interned_strings + lexer->interned_string_size, string.data, string.size);
+            memset(lexer->interned_strings + lexer->interned_string_size + string.size, '\0', 1);
+
+            lexer->interned_string_size += string.size + 1;
             return offset;
         }
 
-        Str* candidate = (Str*) (lexer->interned_strings + offset);
-        if (str_compare(string, *candidate) == 0) {
+        const char* candidate = (const char*) (lexer->interned_strings + offset);
+        if (strncmp(string.data, candidate, 1024) == 0) {
             // We found a match! Returned the cached offset.
             return offset;
         } else {
@@ -50,9 +51,9 @@ IdentId intern_string(Lexer* lexer, Str string) {
     } while (1);
 }
 
-Str lexer_repr_of(TokenArray tokens, TokenId id) {
-    InlineStr* str = (InlineStr*) &tokens.interned_strings[tokens.identifiers[id]];
-    return (Str) { str->size, str->data };
+const char* lexer_repr_of(TokenArray tokens, TokenId id) {
+    const char* str = (const char*) &tokens.interned_strings[tokens.identifiers[id]];
+    return str;
 }
 
 
