@@ -29,7 +29,7 @@ jobs:
             name: "MacOSX x86_64",
             os: macos-latest,
             run: ./build/nox,
-            docker: brew install docker && ./docker/run.sh,
+            docker: brew install -cask docker && sudo systemctl start docker && ./docker/run.sh,
           }
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
