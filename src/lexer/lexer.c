@@ -5,10 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct {
-    size_t size;
-    char   data[];
-} InlineStr;
 
 typedef struct {
     size_t   count;
@@ -52,8 +48,18 @@ IdentId intern_string(Lexer* lexer, Str string) {
 }
 
 const char* lexer_repr_of(TokenArray tokens, TokenId id) {
-    const char* str = (const char*) &tokens.interned_strings[tokens.identifiers[id]];
-    return str;
+    Token token = tokens.tokens[id];
+    switch (token) {
+        case Token_Invalid:  return "<Invalid>";
+        case Token_Plus:     return "+";
+        case Token_Eof:      return "<EOF>";
+
+        case Token_Number: {
+            size_t offset = tokens.identifiers[id];
+            const char* repr = (const char*) &tokens.interned_strings[offset];
+            return repr;
+        }
+    }
 }
 
 
@@ -100,7 +106,7 @@ TokenArray lexer_lex(const char* source) {
                     const char* end = source;
 
 
-                    Str string = (Str) { (ssize_t)(end-start), start };
+                    Str string = (Str) { (size_t)(end-start), start };
                     lexer.representations[lexer.count] = string;
 
                     IdentId ident = intern_string(&lexer, string);

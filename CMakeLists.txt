@@ -5,6 +5,10 @@ project(nox VERSION 0.1 LANGUAGES C)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+if (BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
+
 if(WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /Zi")
@@ -30,4 +34,5 @@ set(SOURCES
     src/os/memory.c)
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)
-#target_compile_definitions(nox PRIVATE OUTPUT_JIT="assembly/jit.bin")
+target_compile_definitions(nox PRIVATE OUTPUT_JIT="jit")
+
