@@ -23,13 +23,13 @@ jobs:
             name: "Ubuntu x86_64",
             os: ubuntu-latest,
             run: ./build/nox,
-            docker: apt install docker.io && sudo service docker status && ./docker/run.sh,
+            docker: apt-get install docker.io && sudo service docker status && ./docker/run.sh,
           }
           - {
             name: "MacOSX x86_64",
             os: macos-latest,
             run: ./build/nox,
-            docker: brew install -cask docker && sudo systemctl start docker && ./docker/run.sh,
+            docker: brew install docker && sudo systemctl start docker && ./docker/run.sh,
           }
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}

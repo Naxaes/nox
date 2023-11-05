@@ -206,7 +206,7 @@ JitFunction jit_compile(Bytecode code) {
     return function;
 #endif
 
-
+#if !defined(_WIN32)
     FILE* pipe = popen(command, "r");
     if (pipe == NULL) {
         perror("popen");
@@ -227,6 +227,7 @@ JitFunction jit_compile(Bytecode code) {
         printf("[INFO]: Disassembly of " OUTPUT_JIT);
         printf("%s\n", buffer);
     }
+#endif
 #endif
 
     return function;
