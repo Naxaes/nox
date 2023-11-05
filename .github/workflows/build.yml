@@ -23,7 +23,7 @@ jobs:
             name: "Ubuntu x86_64",
             os: ubuntu-latest,
             run: ./build/nox,
-            docker: ./docker/run.sh,
+            docker: apt install docker.io && sudo service docker status && ./docker/run.sh,
           }
           - {
             name: "MacOSX x86_64",
