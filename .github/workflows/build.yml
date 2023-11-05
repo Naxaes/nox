@@ -10,8 +10,8 @@ env:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         config:
           - {
             name: "Windows x86-64",
