@@ -1,9 +1,11 @@
-
 # Nox
 A programming language.
 
+More information to come...
 
-## Debugging the JIT
+## Development
+
+### Debugging the JIT
 Simplest way is to use the marco `OUTPUT_JIT`. Then inspect the content by the following command:
 ```bash
 # Aarch64

@@ -46,7 +46,7 @@ TypedAst type_check(UntypedAst ast) {
             return (TypedAst) { NULL, NULL, 0 };
         }
         case NodeKind_Binary: {
-            if (!type_check_literal(ast, first->literal)) {
+            if (!type_check_binary(ast, first->binary)) {
                 fprintf(stderr, "Type error!\n");
                 return (TypedAst) { NULL, NULL, 0 };
             }
