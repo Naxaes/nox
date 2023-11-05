@@ -17,7 +17,7 @@ jobs:
             name: "Windows x86-64",
             os: windows-latest,
             run: build\Release\nox.exe,
-            docker: docker\run.bat,
+            docker: winget install DockerDesktop && docker\run.bat,
           }
           - {
             name: "Ubuntu x86_64",
@@ -29,7 +29,7 @@ jobs:
             name: "MacOSX x86_64",
             os: macos-latest,
             run: ./build/nox,
-            docker: ./docker/run.sh,
+            docker: brew install docker && ./docker/run.sh,
           }
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
