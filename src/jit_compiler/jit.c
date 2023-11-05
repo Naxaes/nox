@@ -192,10 +192,41 @@ JitFunction jit_compile(Bytecode code) {
 #endif
 
 #ifdef OUTPUT_JIT
-    FILE* file = fopen(OUTPUT_JIT, "wb");
+    FILE* file = fopen(OUTPUT_JIT ".bin", "wb");
     assert(file != NULL && "Failed to open " OUTPUT_JIT);
     fwrite((void*)function, code.size, 1, file);
     fclose(file);
+
+#if defined(__x86_64__)
+    const char* command = "llvm-objcopy -I binary -O elf64-x86-64 --rename-section=.data=.text,code " OUTPUT_JIT ".bin " OUTPUT_JIT ".elf && objdump --disassemble " OUTPUT_JIT ".elf";
+#elif defined(__aarch64__)
+    const char* command = "llvm-objcopy -I binary -O elf64-aarch64 --rename-section=.data=.text,code " OUTPUT_JIT ".bin " OUTPUT_JIT ".elf && objdump --disassemble " OUTPUT_JIT ".elf";
+#else
+    const char* command = "";
+    return function;
+#endif
+
+
+    FILE* pipe = popen(command, "r");
+    if (pipe == NULL) {
+        perror("popen");
+        return function;
+    }
+
+    char buffer[1024] = { '\0' };
+    char line[1024] = { '\0' };
+    size_t size = 0;
+    while (fgets(line, sizeof(line), pipe) != NULL) {
+        strncat(buffer, line, sizeof(buffer) - size - 1);
+        size += strnlen(line, sizeof(line) - size - 1);
+    }
+
+    // Close the pipe
+    int status = pclose(pipe);
+    if (status == 0) {
+        printf("[INFO]: Disassembly of " OUTPUT_JIT);
+        printf("%s\n", buffer);
+    }
 #endif
 
     return function;

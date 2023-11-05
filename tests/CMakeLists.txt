@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(test VERSION 0.1 LANGUAGES C CXX)
 
 # Use the new policy behaviour for CMP0135 (to suppress warning)
-cmake_policy(SET CMP0135 NEW)
+#cmake_policy(SET CMP0135 NEW)
 
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 17)

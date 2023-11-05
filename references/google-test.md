@@ -7,5 +7,4 @@
 4. Copy the commit hash in the URL.
 
 ## Create a CMakelists.txt file
-
-https://github.com/google/googletest/blob/main/docs/quickstart-cmake.md
+Reference: https://github.com/google/googletest/blob/main/docs/quickstart-cmake.md
