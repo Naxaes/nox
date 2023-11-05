@@ -3,8 +3,8 @@
 
 using testing::ElementsAre;
 
-
 #include <vector>
+#include <string>
 
 extern "C" {
 #include "lexer/lexer.h"
