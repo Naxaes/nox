@@ -26,8 +26,16 @@ Register mov_imm64(Generator* generator, NodeLiteral literal) {
     return generator->current_register++;
 }
 
-Register mov_add(Generator* generator, Register dest, Register source) {
+Register add(Generator* generator, Register dest, Register source) {
     generator->instructions[generator->count++] = Instruction_Add;
+    generator->instructions[generator->count++] = dest;
+    generator->instructions[generator->count++] = source;
+    generator->current_register--; // We don't need the source register anymore
+    return dest;
+}
+
+Register mul(Generator* generator, Register dest, Register source) {
+    generator->instructions[generator->count++] = Instruction_Mul;
     generator->instructions[generator->count++] = dest;
     generator->instructions[generator->count++] = source;
     generator->current_register--; // We don't need the source register anymore
@@ -46,7 +54,10 @@ Register generate_for_expression(Generator* generator, TypedAst ast, Node* node)
             Register source = generate_for_expression(generator, ast, node->binary.right);
             switch (node->binary.op) {
                 case '+': {
-                    return mov_add(generator, dest, source);
+                    return add(generator, dest, source);
+                } break;
+                case '*': {
+                    return mul(generator, dest, source);
                 } break;
                 default: {
                     fprintf(stderr, "Unknown binary operator: '%c'\n", node->binary.op);

@@ -35,8 +35,11 @@ set(SOURCES
     src/file.c
     src/str.c
     src/jit_compiler/jit.c
-    src/os/memory.c)
+    src/os/memory.c
+    src/transpiler/c_transpiler.c
+)
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)
-#target_compile_definitions(nox PRIVATE OUTPUT_JIT="jit")
+target_compile_definitions(nox PRIVATE OUTPUT_JIT="build/jit")
+target_compile_definitions(nox PRIVATE OUTPUT_C="build/c")
 

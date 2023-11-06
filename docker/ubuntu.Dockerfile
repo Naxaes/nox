@@ -46,7 +46,8 @@ COPY ../examples examples
 WORKDIR /app/build
 
 # Compile the C program
-RUN cmake .. && make
+RUN cmake ..
+RUN cmake --build .
 
 WORKDIR /app
 

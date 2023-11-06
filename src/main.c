@@ -6,6 +6,7 @@
 #include "code_generator/generator.h"
 #include "interpreter/interpreter.h"
 #include "jit_compiler/jit.h"
+#include "transpiler/c_transpiler.h"
 
 #include "str.h"
 #include "file.h"
@@ -13,7 +14,7 @@
 
 int main(void) {
 
-    Str source = read_file("examples/adding.nox");
+    Str source = read_file("examples/arithmetic.nox");
     if (str_is_empty(source)) {
         fprintf(stderr, "Failed to read file\n");
         return 1;
@@ -53,6 +54,8 @@ int main(void) {
 
     i64 result = interpret(code);
     printf("[INFO]: Interpreter result: %lld\n", result);
+
+    compile_c(code);
 
     return 0;
 }
