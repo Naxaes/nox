@@ -19,11 +19,7 @@ void compile_c(Bytecode code) {
     }
 
     fprintf(file, "int main(void) {\n");
-    for (size_t i = 0; i < 8; ++i) {
-        fprintf(file, "\tint ");
-        generate_name(file, i);
-        fprintf(file, " = 0;\n");
-    }
+    fprintf(file, "\tint reg[8] = { 0 };\n");
 
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
@@ -50,40 +46,25 @@ void compile_c(Bytecode code) {
                     return;
                 }
 
-                fprintf(file, "\t");
-                generate_name(file, reg);
-                fprintf(file, " = %llu;\n", value);
+                fprintf(file, "\treg[%d] = %llu;\n", reg, value);
             } break;
             case Instruction_Add: {
                 // int n = n + m;
                 u8 dst   = code.instructions[++i];
                 u8 src   = code.instructions[++i];
 
-                fprintf(file, "\t");
-                generate_name(file, dst);
-                fprintf(file, " = ");
-                generate_name(file, dst);
-                fprintf(file, " + ");
-                generate_name(file, src);
-                fprintf(file, ";\n");
+                fprintf(file, "\treg[%d] = reg[%d] + reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Mul: {
                 // int n = n * m;
                 u8 dst   = code.instructions[++i];
                 u8 src   = code.instructions[++i];
 
-                fprintf(file, "\t");
-                generate_name(file, dst);
-                fprintf(file, " = ");
-                generate_name(file, dst);
-                fprintf(file, " * ");
-                generate_name(file, src);
-                fprintf(file, ";\n");
+                fprintf(file, "\treg[%d] = reg[%d] * reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Exit: {
-                fprintf(file, "\treturn ");
-                generate_name(file, 0);
-                fprintf(file, ";\n}\n");
+                fprintf(file, "\treturn reg[0];\n");
+                fprintf(file, "}\n");
             } break;
             default: {
                 printf("Unknown instruction\n");

@@ -139,6 +139,48 @@ static Node* expression(Parser* parser) {
 }
 
 
+//
+//static Node* atom(Parser* parser) {
+//    Token token = current(parser);
+//    switch (token) {
+//        case Token_Invalid:  return NULL;
+//        case Token_Number:   return number(parser);
+//        case Token_Plus:     return number(parser);
+//        case Token_Asterisk:
+//            break;
+//        case Token_Eof:
+//            break;
+//    }
+//}
+//
+//static Node* _expression(Parser* parser, Precedence current_precedence) {
+//    Node* left = atom(parser);
+//
+//    Token token = current(parser);
+//    Precedence precedence = rules[token].precedence;
+//
+//    if (precedence > current_precedence) {
+//        if (is_binary_operation(token)) {
+//            Node* right = _expression(parser, precedence);
+//            return binary(parser, left, right);
+//        }
+//        if (token == Token_Left_Paren) {
+//            Node* args = arg_list(parser);
+//            return call(parser, left, args);
+//        }
+//        if (token == Token_Left_Bracket) {
+//            return index(parser);
+//        }
+//        if (token == Token_Comma) {
+//            return comma_expr_list(parser, left);
+//        }
+//    } else {
+//        return left;
+//    }
+//}
+
+
+
 UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,

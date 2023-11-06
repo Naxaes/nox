@@ -17,9 +17,9 @@ TypeId type_check_binary(UntypedAst ast, NodeBinary literal) {
     TypeId left = type_check_expression(ast, literal.left);
     TypeId right = type_check_expression(ast, literal.right);
     if (left != right) {
-        return 0;
+        return -1;
     }
-    return 1;
+    return left;
 }
 
 TypeId type_check_expression(UntypedAst ast, Node* node) {
@@ -46,7 +46,7 @@ TypedAst type_check(UntypedAst ast) {
             return (TypedAst) { NULL, NULL, 0 };
         }
         case NodeKind_Binary: {
-            if (!type_check_binary(ast, first->binary)) {
+            if (type_check_binary(ast, first->binary) == -1) {
                 fprintf(stderr, "Type error!\n");
                 return (TypedAst) { NULL, NULL, 0 };
             }
