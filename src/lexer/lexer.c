@@ -51,6 +51,7 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
     switch (token) {
         case Token_Invalid:  return "<Invalid>";
         case Token_Plus:     return "+";
+        case Token_Asterisk: return "*";
         case Token_Eof:      return "<EOF>";
 
         case Token_Number: {
@@ -92,6 +93,10 @@ TokenArray lexer_lex(const char* source) {
             } break;
             case '+': {
                 lexer.tokens[lexer.count++] = (Token) { Token_Plus };
+                ++source;
+            } break;
+            case '*': {
+                lexer.tokens[lexer.count++] = (Token) {Token_Asterisk };
                 ++source;
             } break;
             default: {

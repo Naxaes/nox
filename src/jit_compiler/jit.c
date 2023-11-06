@@ -59,7 +59,7 @@ JitFunction jit_compile_aarch64(Bytecode code) {
         Instruction instruction = code.instructions[i];
         switch (instruction) {
             case Instruction_Invalid: {
-                fprintf(stderr, "Invalid instruction\n");
+                fprintf(stderr, "[WARN]: Invalid instruction\n");
                 return NULL;
             } break;
             case Instruction_MovImm64: {
@@ -85,6 +85,13 @@ JitFunction jit_compile_aarch64(Bytecode code) {
                 u8 reg0  = code.instructions[++i];
                 u8 reg1  = code.instructions[++i];
                 u32 inst = aarch64_add(reg0, reg1);
+                machine_code[size++] = inst;
+            } break;
+            case Instruction_Mul: {
+                // MUL Xd, Xn, Xm
+                u8 reg0  = code.instructions[++i];
+                u8 reg1  = code.instructions[++i];
+                u32 inst = aarch64_mul(reg0, reg1);
                 machine_code[size++] = inst;
             } break;
             case Instruction_Exit: {
@@ -116,6 +123,12 @@ JitFunction jit_compile_aarch64(Bytecode code) {
     0xc0 + ((reg0 & 0b111) << 3) + (reg1 & 0b111), \
 }
 
+#define x86_64_mul(reg0, reg1) {        \
+    0x0f,                               \
+    0xaf,                               \
+    0xc0 + ((reg1 & 0b111) << 3) + (reg0 & 0b111), \
+}
+
 #define x86_64_ret() {                  \
     0xc3                                \
 }
@@ -129,7 +142,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
         Instruction instruction = code.instructions[i];
         switch (instruction) {
             case Instruction_Invalid: {
-                fprintf(stderr, "Invalid instruction\n");
+                fprintf(stderr, "[WARN]: Invalid instruction\n");
                 return NULL;
             } break;
             case Instruction_MovImm64: {
@@ -155,10 +168,18 @@ JitFunction jit_compile_x86_64(Bytecode code) {
                 size += sizeof(inst);
             } break;
             case Instruction_Add: {
-                // addl %ebx %eax
+                // addl %enx %enx
                 u8 src   = code.instructions[++i];
                 u8 dst   = code.instructions[++i];
                 u8 inst[] = x86_64_add(dst, src);
+                memcpy(&machine_code[size], inst, sizeof(inst));
+                size += sizeof(inst);
+            } break;
+            case Instruction_Mul: {
+                // imul %enx %enx
+                u8 src   = code.instructions[++i];
+                u8 dst   = code.instructions[++i];
+                u8 inst[] = x86_64_mul(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;

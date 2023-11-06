@@ -9,6 +9,7 @@ typedef enum {
     Token_Invalid,
     Token_Number,
     Token_Plus,
+    Token_Asterisk,
     Token_Eof,
 } Token;
 #define TOKEN_COUNT (Token_Eof + 1)
