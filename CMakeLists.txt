@@ -9,6 +9,10 @@ if (BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
+if (BUILD_FUZZER)
+    add_subdirectory(fuzzing)
+endif()
+
 if(WIN32)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W4")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Od /Zi")
@@ -34,5 +38,5 @@ set(SOURCES
     src/os/memory.c)
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)
-target_compile_definitions(nox PRIVATE OUTPUT_JIT="jit")
+#target_compile_definitions(nox PRIVATE OUTPUT_JIT="jit")
 

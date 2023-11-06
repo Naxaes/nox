@@ -10,7 +10,6 @@ typedef struct {
     size_t   count;
     Token*   tokens;
     IdentId* identifiers;
-    Str*     representations;
 
     u32*   intern_string_lookup;
     u8*    interned_strings;
@@ -68,7 +67,6 @@ TokenArray lexer_lex(const char* source) {
         .count  = 0,
         .tokens = (Token*) malloc(1024),
         .identifiers = (IdentId*) malloc(1024 * sizeof(IdentId)),
-        .representations = (Str*) malloc(1024 * sizeof(Str)),
         .intern_string_lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
         .interned_strings     = (u8*) malloc(1024),
         .interned_string_size = sizeof(Str),  // Skip the first few bytes so that 0 from the lookup table means "not found".
@@ -88,7 +86,6 @@ TokenArray lexer_lex(const char* source) {
                     lexer.tokens,
                     lexer.identifiers,
                     lexer.count,
-                    lexer.intern_string_lookup,
                     lexer.interned_strings,
                     lexer.interned_string_size
                 };
@@ -107,8 +104,6 @@ TokenArray lexer_lex(const char* source) {
 
 
                     Str string = (Str) { (size_t)(end-start), start };
-                    lexer.representations[lexer.count] = string;
-
                     IdentId ident = intern_string(&lexer, string);
                     lexer.identifiers[lexer.count] = ident;
 
@@ -118,11 +113,10 @@ TokenArray lexer_lex(const char* source) {
 
                 fprintf(stderr, "Unknown token: '%c'\n", *source);
                 free(lexer.tokens);
-                free(lexer.representations);
                 free(lexer.identifiers);
                 free(lexer.intern_string_lookup);
                 free(lexer.interned_strings);
-                return (TokenArray) { NULL, NULL, 0, NULL, NULL, 0 };
+                return (TokenArray) { NULL, NULL, 0, NULL, 0 };
             } break;
         }
     }

@@ -18,7 +18,6 @@ typedef struct {
     IdentId* identifiers;
     size_t   size;
 
-    u32*   intern_string_lookup;
     u8*    interned_strings;
     size_t interned_string_size;
 } TokenArray;

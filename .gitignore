@@ -1,8 +1,10 @@
 .idea/
+references/~*
+
 cmake-build-debug/
 cmake-build-release/
 cmake-build-test/
-references/~*
+cmake-build-fuzzing/
 
 assembly/*.o
 assembly/*.out
