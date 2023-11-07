@@ -10,7 +10,6 @@ typedef struct {
     size_t   count;
     Token*   tokens;
     IdentId* identifiers;
-    Str*     representations;
 
     u32*   intern_string_lookup;
     u8*    interned_strings;
@@ -52,9 +51,12 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
     switch (token) {
         case Token_Invalid:  return "<Invalid>";
         case Token_Plus:     return "+";
+        case Token_Asterisk: return "*";
+        case Token_Equal:    return "=";
         case Token_Eof:      return "<EOF>";
 
-        case Token_Number: {
+        case Token_Number:
+        case Token_Identifier: {
             size_t offset = tokens.identifiers[id];
             const char* repr = (const char*) &tokens.interned_strings[offset];
             return repr;
@@ -68,7 +70,6 @@ TokenArray lexer_lex(const char* source) {
         .count  = 0,
         .tokens = (Token*) malloc(1024),
         .identifiers = (IdentId*) malloc(1024 * sizeof(IdentId)),
-        .representations = (Str*) malloc(1024 * sizeof(Str)),
         .intern_string_lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
         .interned_strings     = (u8*) malloc(1024),
         .interned_string_size = sizeof(Str),  // Skip the first few bytes so that 0 from the lookup table means "not found".
@@ -88,13 +89,20 @@ TokenArray lexer_lex(const char* source) {
                     lexer.tokens,
                     lexer.identifiers,
                     lexer.count,
-                    lexer.intern_string_lookup,
                     lexer.interned_strings,
                     lexer.interned_string_size
                 };
             } break;
             case '+': {
                 lexer.tokens[lexer.count++] = (Token) { Token_Plus };
+                ++source;
+            } break;
+            case '*': {
+                lexer.tokens[lexer.count++] = (Token) { Token_Asterisk };
+                ++source;
+            } break;
+            case '=': {
+                lexer.tokens[lexer.count++] = (Token) { Token_Equal };
                 ++source;
             } break;
             default: {
@@ -107,22 +115,32 @@ TokenArray lexer_lex(const char* source) {
 
 
                     Str string = (Str) { (size_t)(end-start), start };
-                    lexer.representations[lexer.count] = string;
-
                     IdentId ident = intern_string(&lexer, string);
                     lexer.identifiers[lexer.count] = ident;
 
-                    lexer.tokens[lexer.count++] = (Token) {Token_Number };
+                    lexer.tokens[lexer.count++] = (Token) { Token_Number };
+                    break;
+                } else if (('a' <= *source && *source <= 'z') || ('A' <= *source && *source <= 'Z') || *source == '_') {
+                    const char* start = source;
+                    do {
+                        ++source;
+                    } while (('a' <= *source && *source <= 'z') || ('A' <= *source && *source <= 'Z') || *source == '_' || ('0' <= *source && *source <= '9'));
+                    const char* end = source;
+
+                    Str string = (Str) { (size_t)(end-start), start };
+                    IdentId ident = intern_string(&lexer, string);
+                    lexer.identifiers[lexer.count] = ident;
+
+                    lexer.tokens[lexer.count++] = (Token) { Token_Identifier };
                     break;
                 }
 
                 fprintf(stderr, "Unknown token: '%c'\n", *source);
                 free(lexer.tokens);
-                free(lexer.representations);
                 free(lexer.identifiers);
                 free(lexer.intern_string_lookup);
                 free(lexer.interned_strings);
-                return (TokenArray) { NULL, NULL, 0, NULL, NULL, 0 };
+                return (TokenArray) { NULL, NULL, 0, NULL, 0 };
             } break;
         }
     }

@@ -8,6 +8,8 @@ typedef enum {
     Instruction_Invalid,
     Instruction_MovImm64,
     Instruction_Add,
+    Instruction_Mul,
+    Instruction_Store,
     Instruction_Exit,
 } Instruction;
 

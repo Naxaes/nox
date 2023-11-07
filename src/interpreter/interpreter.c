@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 
 i64 interpret(Bytecode code) {
@@ -19,7 +20,7 @@ i64 interpret(Bytecode code) {
         Instruction instruction = interpreter.instructions[interpreter.ip++];
         switch (instruction) {
             case Instruction_Invalid: {
-                fprintf(stderr, "Invalid instruction\n");
+                fprintf(stderr, "[WARN]: Invalid instruction\n");
                 free(interpreter.stack);
                 free(interpreter.registers);
                 return 1;
@@ -43,6 +44,16 @@ i64 interpret(Bytecode code) {
                 Register dest   = interpreter.instructions[interpreter.ip++];
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] += interpreter.registers[source];
+            } break;
+            case Instruction_Mul: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] *= interpreter.registers[source];
+            } break;
+            case Instruction_Store: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[source];
             } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];

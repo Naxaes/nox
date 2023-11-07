@@ -8,7 +8,10 @@ typedef u32 IdentId;
 typedef enum {
     Token_Invalid,
     Token_Number,
+    Token_Identifier,
     Token_Plus,
+    Token_Asterisk,
+    Token_Equal,
     Token_Eof,
 } Token;
 #define TOKEN_COUNT (Token_Eof + 1)
@@ -18,7 +21,6 @@ typedef struct {
     IdentId* identifiers;
     size_t   size;
 
-    u32*   intern_string_lookup;
     u8*    interned_strings;
     size_t interned_string_size;
 } TokenArray;
