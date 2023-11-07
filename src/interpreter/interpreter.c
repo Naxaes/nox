@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
 
 i64 interpret(Bytecode code) {
@@ -48,6 +49,11 @@ i64 interpret(Bytecode code) {
                 Register dest   = interpreter.instructions[interpreter.ip++];
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] *= interpreter.registers[source];
+            } break;
+            case Instruction_Store: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[source];
             } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];

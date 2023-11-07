@@ -14,7 +14,7 @@
 
 int main(void) {
 
-    Str source = read_file("examples/arithmetic.nox");
+    Str source = read_file("examples/assignment.nox");
     if (str_is_empty(source)) {
         fprintf(stderr, "Failed to read file\n");
         return 1;

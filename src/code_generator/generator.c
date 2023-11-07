@@ -42,10 +42,18 @@ Register mul(Generator* generator, Register dest, Register source) {
     return dest;
 }
 
+Register store(Generator* generator, Register dest, Register source) {
+    generator->instructions[generator->count++] = Instruction_Store;
+    generator->instructions[generator->count++] = dest;
+    generator->instructions[generator->count++] = source;
+    return dest;
+}
+
 
 Register generate_for_expression(Generator* generator, TypedAst ast, Node* node) {
     switch (node->kind) {
         case NodeKind_Invalid:
+        case NodeKind_VarDecl:
             assert(0 && "Invalid node kind");
         case NodeKind_Literal:
             return mov_imm64(generator, node->literal);
@@ -77,16 +85,21 @@ Bytecode generate_code(TypedAst ast) {
         .current_register = 0,
     };
 
-    Node* first = ast.start;
-    switch (first->kind) {
+    Node* node = ast.start;
+    switch (node->kind) {
         case NodeKind_Invalid: {
-            fprintf(stderr, "Unknown node kind: '%d'\n", first->kind);
+            fprintf(stderr, "Unknown node kind: '%d'\n", node->kind);
             free(generator.instructions);
             return (Bytecode) { NULL, 0 };
         } break;
         case NodeKind_Literal:
         case NodeKind_Binary: {
-            generate_for_expression(&generator, ast, first);
+            generate_for_expression(&generator, ast, node);
+        } break;
+        case NodeKind_VarDecl: {
+            Register dest = generator.current_register++;
+            Register src = generate_for_expression(&generator, ast, node->var_decl.expression);
+            store(&generator, dest, src);
         } break;
     }
 

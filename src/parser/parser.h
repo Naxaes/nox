@@ -13,11 +13,13 @@ typedef enum {
     NodeKind_Invalid,
     NodeKind_Literal,
     NodeKind_Binary,
+    NodeKind_VarDecl,
 } NodeKind;
 
 typedef struct {
     NodeKind kind;
     enum {
+        Literal_Invalid,
         Literal_Integer,
         Literal_Real,
     } type;
@@ -34,10 +36,17 @@ typedef struct {
     char     op;
 } NodeBinary;
 
+typedef struct {
+    NodeKind kind;
+    const char* name;
+    Node* expression;
+} NodeVarDecl;
+
 union Node {
     NodeKind kind;
     NodeLiteral literal;
     NodeBinary  binary;
+    NodeVarDecl var_decl;
 };
 
 typedef struct {

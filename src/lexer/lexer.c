@@ -52,9 +52,11 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
         case Token_Invalid:  return "<Invalid>";
         case Token_Plus:     return "+";
         case Token_Asterisk: return "*";
+        case Token_Equal:    return "=";
         case Token_Eof:      return "<EOF>";
 
-        case Token_Number: {
+        case Token_Number:
+        case Token_Identifier: {
             size_t offset = tokens.identifiers[id];
             const char* repr = (const char*) &tokens.interned_strings[offset];
             return repr;
@@ -96,7 +98,11 @@ TokenArray lexer_lex(const char* source) {
                 ++source;
             } break;
             case '*': {
-                lexer.tokens[lexer.count++] = (Token) {Token_Asterisk };
+                lexer.tokens[lexer.count++] = (Token) { Token_Asterisk };
+                ++source;
+            } break;
+            case '=': {
+                lexer.tokens[lexer.count++] = (Token) { Token_Equal };
                 ++source;
             } break;
             default: {
@@ -112,7 +118,20 @@ TokenArray lexer_lex(const char* source) {
                     IdentId ident = intern_string(&lexer, string);
                     lexer.identifiers[lexer.count] = ident;
 
-                    lexer.tokens[lexer.count++] = (Token) {Token_Number };
+                    lexer.tokens[lexer.count++] = (Token) { Token_Number };
+                    break;
+                } else if (('a' <= *source && *source <= 'z') || ('A' <= *source && *source <= 'Z') || *source == '_') {
+                    const char* start = source;
+                    do {
+                        ++source;
+                    } while (('a' <= *source && *source <= 'z') || ('A' <= *source && *source <= 'Z') || *source == '_' || ('0' <= *source && *source <= '9'));
+                    const char* end = source;
+
+                    Str string = (Str) { (size_t)(end-start), start };
+                    IdentId ident = intern_string(&lexer, string);
+                    lexer.identifiers[lexer.count] = ident;
+
+                    lexer.tokens[lexer.count++] = (Token) { Token_Identifier };
                     break;
                 }
 

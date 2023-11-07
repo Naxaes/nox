@@ -16,6 +16,12 @@ static inline Token current(Parser* parser) {
     return parser->tokens.tokens[parser->current_token];
 }
 
+static inline Token peek(Parser* parser) {
+    if (parser->current_token + 1 >= parser->tokens.size)
+        return Token_Eof;
+    return parser->tokens.tokens[parser->current_token + 1];
+}
+
 static inline TokenId advance(Parser* parser) {
     return parser->current_token++;
 }
@@ -64,11 +70,13 @@ typedef struct {
 } ParseRule;
 
 ParseRule rules[] = {
-        [Token_Invalid]  =   { NULL,     NULL,       Precedence_None},
-        [Token_Number]   =   { number,   NULL,       Precedence_None},
-        [Token_Plus]     =   { NULL,     binary,     Precedence_Term},
-        [Token_Asterisk] =   { NULL,     binary,     Precedence_Factor},
-        [Token_Eof]      =   { NULL,     NULL,       Precedence_None},
+        [Token_Invalid]     =   { NULL,         NULL,         Precedence_None},
+        [Token_Number]      =   { number,       NULL,         Precedence_None},
+        [Token_Identifier]  =   { NULL,         NULL,         Precedence_None},
+        [Token_Plus]        =   { NULL,         binary,       Precedence_Term},
+        [Token_Asterisk]    =   { NULL,         binary,       Precedence_Factor},
+        [Token_Equal]       =   { NULL,         NULL,         Precedence_None},
+        [Token_Eof]         =   { NULL,         NULL,         Precedence_None},
 };
 
 static Node* precedence(Parser* parser, Precedence precedence) {
@@ -139,6 +147,25 @@ static Node* expression(Parser* parser) {
 }
 
 
+static Node* assignment(Parser* parser) {
+    assert(current(parser) == Token_Identifier && "Expected number token");
+
+    const char* repr = lexer_repr_of(parser->tokens, parser->current_token);
+    advance(parser);
+
+    if (current(parser) != Token_Equal) {
+        fprintf(stderr, "Expected '=' after identifier\n");
+        return NULL;
+    }
+
+    advance(parser);
+    Node* expr = expression(parser);
+
+    NodeVarDecl var_decl = { NodeKind_VarDecl, .name = repr, .expression = expr };
+    return add_node(parser, (Node) { .var_decl = var_decl });
+}
+
+
 UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
@@ -150,7 +177,7 @@ UntypedAst parse(TokenArray tokens) {
     // Reserve one slot so that any references to 0 are invalid,
     // as no nodes should be able to reference a start node.
     add_node(&parser, (Node) { NodeKind_Invalid });
-    Node* start = 0;
+    Node* node = 0;
 
     while (parser.current_token < tokens.size) {
         Token token = current(&parser);
@@ -158,18 +185,29 @@ UntypedAst parse(TokenArray tokens) {
         switch (token) {
             case Token_Plus:
             case Token_Asterisk:
+            case Token_Equal:
             case Token_Invalid: {
                 fprintf(stderr, "Invalid token: '%d'\n", token);
                 free(parser.nodes);
                 return (UntypedAst) { NULL, 0 };
             } break;
+            case Token_Identifier: {
+                if (peek(&parser) == Token_Equal) {
+                    node = assignment(&parser);
+                } else {
+                    assert("TODO");
+                }
+            } break;
             case Token_Number: {
-                start = expression(&parser);
+                node = expression(&parser);
             } break;
             case Token_Eof: {
-                return (UntypedAst) { parser.nodes, start };
+                return (UntypedAst) {parser.nodes, node };
             }
         }
+
+        if (node == 0)
+            return (UntypedAst) { NULL, 0 };
     }
 
     fprintf(stderr, "Unexpected end of token stream\n");
