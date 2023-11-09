@@ -49,6 +49,13 @@ void compile_c(Bytecode code) {
 
                 fprintf(file, "\treg[%d] = %llu;\n", reg, value);
             } break;
+            case Instruction_Mov: {
+                // int n = m;
+                u8 dst   = code.instructions[++i];
+                u8 src   = code.instructions[++i];
+
+                fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
+            } break;
             case Instruction_Add: {
                 // int n = n + m;
                 u8 dst   = code.instructions[++i];
@@ -63,16 +70,23 @@ void compile_c(Bytecode code) {
 
                 fprintf(file, "\treg[%d] = reg[%d] * reg[%d];\n", dst, dst, src);
             } break;
-            case Instruction_Exit: {
-                fprintf(file, "\treturn reg[0];\n");
-                fprintf(file, "}\n");
-            } break;
             case Instruction_Store: {
                 // int n = m;
                 u8 dst   = code.instructions[++i];
                 u8 src   = code.instructions[++i];
 
                 fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
+            } break;
+            case Instruction_Load: {
+                // int n = m;
+                u8 dst   = code.instructions[++i];
+                u8 src   = code.instructions[++i];
+
+                fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
+            } break;
+            case Instruction_Exit: {
+                fprintf(file, "\treturn reg[0];\n");
+                fprintf(file, "}\n");
             } break;
         }
     }

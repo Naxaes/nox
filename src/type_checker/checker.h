@@ -5,10 +5,21 @@
 
 
 typedef u32 TypeId;
+typedef struct {
+    TypeId type;
+    Node   decl;
+} Local;
+
+typedef struct {
+    size_t  parent;
+    Local*  locals;
+    size_t  count;
+} Block;
+
 
 typedef struct {
     Node*   nodes;
-    TypeId* types;
+    Block*  blocks;
     Node*   start;
 } TypedAst;
 

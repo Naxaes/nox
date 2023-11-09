@@ -14,13 +14,14 @@
 
 int main(void) {
 
-    Str source = read_file("examples/assignment.nox");
+    Str source = read_file("examples/identifier.nox");
     if (str_is_empty(source)) {
         fprintf(stderr, "Failed to read file\n");
         return 1;
     }
+    printf("[INFO]: Source:\n%s\n", source.data);
 
-    TokenArray array = lexer_lex(source.data);
+    TokenArray array = lexer_lex(source);
     if (array.tokens == NULL) {
         fprintf(stderr, "Failed to lex source\n");
         return 1;

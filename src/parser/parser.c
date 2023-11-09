@@ -7,23 +7,31 @@
 
 typedef struct {
     TokenArray tokens;
-    TokenId    current_token;
+    TokenId    current_token_id;
     Node*      nodes;
     NodeId     node_count;
+    Node**     views;
+    NodeId     view_count;
+    Node**     stack;
+    NodeId     stack_count;
 } Parser;
 
 static inline Token current(Parser* parser) {
-    return parser->tokens.tokens[parser->current_token];
+    return parser->tokens.tokens[parser->current_token_id];
 }
 
 static inline Token peek(Parser* parser) {
-    if (parser->current_token + 1 >= parser->tokens.size)
+    if (parser->current_token_id + 1 >= parser->tokens.size)
         return Token_Eof;
-    return parser->tokens.tokens[parser->current_token + 1];
+    return parser->tokens.tokens[parser->current_token_id + 1];
 }
 
 static inline TokenId advance(Parser* parser) {
-    return parser->current_token++;
+    return parser->current_token_id++;
+}
+
+static inline const char* repr_of_current(Parser* parser) {
+    return lexer_repr_of(parser->tokens, parser->current_token_id);
 }
 
 static inline Node* add_node(Parser* parser, Node node) {
@@ -44,6 +52,7 @@ static inline Node* set_node(Parser* parser, NodeId id, Node node) {
 
 
 static Node* number(Parser*);
+static Node* identifier(Parser*);
 static Node* binary(Parser* parser, Node* left);
 
 
@@ -72,7 +81,7 @@ typedef struct {
 ParseRule rules[] = {
         [Token_Invalid]     =   { NULL,         NULL,         Precedence_None},
         [Token_Number]      =   { number,       NULL,         Precedence_None},
-        [Token_Identifier]  =   { NULL,         NULL,         Precedence_None},
+        [Token_Identifier]  =   { identifier,   NULL,         Precedence_None},
         [Token_Plus]        =   { NULL,         binary,       Precedence_Term},
         [Token_Asterisk]    =   { NULL,         binary,       Precedence_Factor},
         [Token_Equal]       =   { NULL,         NULL,         Precedence_None},
@@ -107,18 +116,29 @@ static Node* precedence(Parser* parser, Precedence precedence) {
 static Node* number(Parser* parser) {
     assert(current(parser) == Token_Number && "Expected number token");
 
-    const char* repr = lexer_repr_of(parser->tokens, parser->current_token);
+    const char* repr = repr_of_current(parser);
     i64 value = strtoll(repr, NULL, 10);
     advance(parser);
 
-    NodeLiteral literal = { NodeKind_Literal, .type=Literal_Integer, .value.integer = value };
+    NodeLiteral literal = { NodeKind_Literal, .type = Literal_Integer, .value.integer = value };
     return add_node(parser, (Node) { .literal = literal });
+}
+
+static Node* identifier(Parser* parser) {
+    assert(current(parser) == Token_Identifier && "Expected identifier token");
+
+    const char* repr = repr_of_current(parser);
+    advance(parser);
+
+    NodeIdentifier ident = { NodeKind_Identifier, .name = repr };
+    return add_node(parser, (Node) { .identifier = ident });
 }
 
 static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
-    NodeBinary binary;
+    assert(token_is_binary_operator(token) && "Expected binary operator");
 
+    NodeBinary binary;
     switch (token) {
         case Token_Plus: {
             binary = (NodeBinary) { NodeKind_Binary, .left=left, .right=0, .op='+' };
@@ -127,10 +147,9 @@ static Node* binary(Parser* parser, Node* left) {
             binary = (NodeBinary) { NodeKind_Binary, .left=left, .right=0, .op='*' };
         } break;
         default: {
-            fprintf(stderr, "Unexpected path\n");
-            return NULL;
+            assert(0 && "Invalid binary operator");
         }
-    }
+}
 
     NodeId id = reserve_node(parser);
     advance(parser);
@@ -150,7 +169,7 @@ static Node* expression(Parser* parser) {
 static Node* assignment(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected number token");
 
-    const char* repr = lexer_repr_of(parser->tokens, parser->current_token);
+    const char* repr = repr_of_current(parser);
     advance(parser);
 
     if (current(parser) != Token_Equal) {
@@ -169,17 +188,21 @@ static Node* assignment(Parser* parser) {
 UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
-        .current_token = 0,
+        .current_token_id = 0,
         .nodes = (Node*) malloc(1024),
         .node_count = 0,
+        .views = (Node**) malloc(1024),
+        .view_count = 0,
+        .stack = (Node**) malloc(1024),
+        .stack_count = 0,
     };
 
     // Reserve one slot so that any references to 0 are invalid,
     // as no nodes should be able to reference a start node.
-    add_node(&parser, (Node) { NodeKind_Invalid });
+    reserve_node(&parser);
     Node* node = 0;
 
-    while (parser.current_token < tokens.size) {
+    while (parser.current_token_id < tokens.size) {
         Token token = current(&parser);
 
         switch (token) {
@@ -189,28 +212,43 @@ UntypedAst parse(TokenArray tokens) {
             case Token_Invalid: {
                 fprintf(stderr, "Invalid token: '%d'\n", token);
                 free(parser.nodes);
-                return (UntypedAst) { NULL, 0 };
+                return (UntypedAst) { NULL, NULL, NULL };
             } break;
             case Token_Identifier: {
                 if (peek(&parser) == Token_Equal) {
                     node = assignment(&parser);
                 } else {
-                    assert("TODO");
+                    node = identifier(&parser);
                 }
             } break;
             case Token_Number: {
                 node = expression(&parser);
             } break;
             case Token_Eof: {
-                return (UntypedAst) {parser.nodes, node };
+                for (size_t i = 0; i < parser.stack_count; ++i) {
+                    parser.views[parser.view_count++] = parser.stack[i];
+                }
+                parser.views[parser.view_count++] = 0;
+
+                Node** statements = parser.views + (parser.view_count - parser.stack_count - 1);
+                NodeBlock block = { NodeKind_Block, .nodes = statements };
+
+                parser.stack_count = 0;
+                parser.view_count += parser.stack_count + 1;
+
+                node = add_node(&parser, (Node) { .block = block });
+
+                return (UntypedAst) { parser.nodes, node, parser.views };
             }
         }
 
         if (node == 0)
-            return (UntypedAst) { NULL, 0 };
+            return (UntypedAst) { NULL, NULL, NULL };
+
+        parser.stack[parser.stack_count++] = node;
     }
 
     fprintf(stderr, "Unexpected end of token stream\n");
     free(parser.nodes);
-    return (UntypedAst) { NULL, 0 };
+    return (UntypedAst) { NULL, NULL, NULL };
 }
