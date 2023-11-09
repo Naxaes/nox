@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <assert.h>
+#include <locale.h>
 
 typedef struct {
     i64 result;
@@ -20,8 +21,8 @@ typedef struct {
 } InterpreterResult;
 
 
-InterpreterResult run(Str source, int verbose) {
-    TokenArray array = lexer_lex(source);
+InterpreterResult run(Str name, Str source, int verbose) {
+    TokenArray array = lexer_lex(name, source);
     if (array.tokens == NULL) {
         fprintf(stderr, "Failed to lex source\n");
         return (InterpreterResult) { 0, 1 };
@@ -47,7 +48,8 @@ InterpreterResult run(Str source, int verbose) {
 
     JitFunction jitted_function = jit_compile(code, verbose);
     if (jitted_function) {
-        u64 result = jitted_function();
+        i64 result = jitted_function();
+        return (InterpreterResult) { result, 0 };
     } else {
         fprintf(stderr, "[INFO]: Failed to JIT compile\n");
     }
@@ -74,7 +76,7 @@ i64 repl(void) {
 
         memset(buffer, 0, length);
 
-        InterpreterResult result = run((Str) { source_length, source }, 0);
+        InterpreterResult result = run(STR("<repl>"), (Str) { source_length, source }, 0);
         if (result.error) {
             source_length -= length;
             source[source_length] = '\0';
@@ -89,6 +91,8 @@ i64 repl(void) {
 
 
 int main(int argc, const char* argv[]) {
+    setlocale(LC_ALL, "");
+
     ArgCommands commands = parse_args(argc, argv);
 
     clock_t start = (commands.take_time) ? clock() : 0;
@@ -117,7 +121,7 @@ int main(int argc, const char* argv[]) {
             }
             if (!commands.is_quiet)
                 printf("[INFO]: Source:\n%s\n", source.data);
-            InterpreterResult result = run(source, !commands.is_quiet);
+            InterpreterResult result = run(str_from_c_str(commands.input_file), source, !commands.is_quiet);
             if (result.error) {
                 fprintf(stderr, "Failed to run source\n");
                 return 1;

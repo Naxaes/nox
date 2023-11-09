@@ -9,7 +9,7 @@ int LLVMFuzzerTestOneInput(const u8* data, size_t size) {
     memcpy(source, data, size);
     source[size] = '\0';
 
-    TokenArray token_array = lexer_lex(source);
+    TokenArray token_array = lexer_lex(STR("<fuzzer>"), (Str) { size, source });
 
     if (token_array.tokens) free(token_array.tokens);
     if (token_array.identifiers) free(token_array.identifiers);
