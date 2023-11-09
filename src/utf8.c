@@ -89,12 +89,11 @@ int is_valid_start_byte(char byte) {
 int multi_byte_count(char byte) {
     u8 bits = to_u8(byte);
     if ((bits & 0b01111111u) == bits) return 1;
-    if ((bits & 0b10111111u) == bits) assert(0 && "Byte is continuation byte.");
+    if ((bits & 0b10111111u) == bits) return 0;
     if ((bits & 0b11011111u) == bits) return 2;
     if ((bits & 0b11101111u) == bits) return 3;
     if ((bits & 0b11110111u) == bits) return 4;
 
-    assert(0 && "Invalid path.");
     return 0;
 }
 

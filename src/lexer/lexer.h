@@ -10,8 +10,8 @@ typedef enum {
     Token_Number,
     Token_Real,
     Token_Identifier,
-    Token_Binary_Operator_Start,
-        Token_Plus = Token_Binary_Operator_Start,
+    Token_Plus,
+        Token_Binary_Operator_Start = Token_Plus,
         Token_Asterisk,
     Token_Binary_Operator_End = Token_Asterisk,
     Token_Equal,
@@ -44,5 +44,5 @@ TokenArray lexer_lex(Str name, Str source);
 /// Get the textual representation of a token.
 const char* lexer_repr_of(TokenArray tokens, TokenId id);
 
-
+void token_array_free(TokenArray tokens);
 
