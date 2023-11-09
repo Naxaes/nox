@@ -25,3 +25,4 @@ typedef struct {
 
 TypedAst type_check(UntypedAst ast);
 
+void typed_ast_free(TypedAst ast);

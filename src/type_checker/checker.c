@@ -27,6 +27,24 @@ typedef struct {
     Block* current;
 } Checker;
 
+void checker_free(Checker* checker) {
+    for (size_t i = 0; i < checker->block_count; ++i) {
+        free(checker->blocks[i].locals);
+    }
+    free(checker->blocks);
+    grammar_tree_free(checker->ast);
+}
+
+TypedAst checker_to_ast(Checker* checker) {
+    grammar_tree_free(checker->ast);
+    return (TypedAst) {
+        checker->ast.nodes,
+        checker->blocks,
+        checker->ast.start,
+    };
+}
+
+
 void push_block(Checker* checker) {
     size_t parent = -1;
     if (checker->current != NULL) {
@@ -87,6 +105,8 @@ TypeId type_check_binary(Checker* checker, NodeBinary binary) {
 
 TypeId type_check_var_decl(Checker* checker, NodeVarDecl var_decl) {
     TypeId expr = type_check_expression(checker, var_decl.expression);
+    if (expr == 0)
+        return 0;
     Block* current = checker->current;
     current->locals[current->count++] = (Local) {
         .type = expr,
@@ -150,10 +170,18 @@ TypedAst type_check(UntypedAst ast) {
 
     TypeId type = type_check_statement(&checker, node);
     if (type == 0) {
-        free(checker.blocks);
+        checker_free(&checker);
         return (TypedAst) { NULL, NULL, NULL };
     }
 
-    return (TypedAst) { ast.nodes, checker.blocks, node };
+    return checker_to_ast(&checker);
 }
 
+void typed_ast_free(TypedAst ast) {
+    free(ast.nodes);
+    Block* block = ast.blocks;
+    while (block != NULL) {
+        free(block->locals);
+    }
+    free(ast.blocks);
+}

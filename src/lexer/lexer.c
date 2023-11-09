@@ -22,6 +22,37 @@ typedef struct {
     size_t interned_string_size;
 } Lexer;
 
+
+void lexer_free(Lexer* lexer) {
+    free(lexer->tokens);
+    free(lexer->identifiers);
+    free(lexer->indices);
+    free(lexer->intern_string_lookup);
+    free(lexer->interned_strings);
+}
+
+void token_array_free(TokenArray tokens) {
+    free(tokens.tokens);
+    free(tokens.identifiers);
+    free(tokens.indices);
+    free(tokens.interned_strings);
+}
+
+TokenArray lexer_to_token_array(Lexer* lexer, Str name) {
+    free(lexer->intern_string_lookup);
+    return (TokenArray) {
+            name,
+            lexer->source,
+            lexer->tokens,
+            lexer->identifiers,
+            lexer->indices,
+            lexer->count,
+            lexer->interned_strings,
+            lexer->interned_string_size
+    };
+}
+
+
 static IdentId intern_string(Lexer* lexer, Str string) {
     u64 index  = str_hash(string) & (1024-1);
     u32 offset = lexer->intern_string_lookup[index];
@@ -79,7 +110,6 @@ static inline Str parse_number(const char* source, Token* token) {
     const char* end = source;
 
     if (*source == '.') {
-        ++source;
         do {
             ++source;
         } while (is_digit(*source));
@@ -130,7 +160,7 @@ TokenArray lexer_lex(Str name, Str source) {
     Lexer lexer =  {
         .source = source,
         .count  = 0,
-        .tokens = (Token*) malloc(1024),
+        .tokens = (Token*) malloc(1024 * sizeof(Token)),
         .identifiers = (IdentId*) malloc(1024 * sizeof(IdentId)),
         .indices = (size_t*) malloc(1024 * sizeof(size_t)),
         .intern_string_lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
@@ -148,17 +178,7 @@ TokenArray lexer_lex(Str name, Str source) {
         switch (*current) {
             case '\0': {
                 add_token(&lexer, current, Token_Eof);
-                free(lexer.intern_string_lookup);
-                return (TokenArray) {
-                    name,
-                    source,
-                    lexer.tokens,
-                    lexer.identifiers,
-                    lexer.indices,
-                    lexer.count,
-                    lexer.interned_strings,
-                    lexer.interned_string_size
-                };
+                return lexer_to_token_array(&lexer, name);
             } break;
             case '+': {
                 current += add_token(&lexer, current, Token_Plus);
@@ -179,19 +199,17 @@ TokenArray lexer_lex(Str name, Str source) {
                     current += add_token_with_identifier(&lexer, current, Token_Identifier, string);
                 } else {
                     int width = multi_byte_count(*current);
+                    if (width == 0) width = 1;
                     fprintf(stderr, "[Error] (Lexer) " STR_FMT "\n  Unknown character: '" STR_FMT "'\n", STR_ARG(name), width, current);
 
                     // Assume all characters only take up one column in the terminal for now.
                     int start = (int)(current - source.data);
-                    point_to_error(source, start, start+1);
-                    free(lexer.tokens);
-                    free(lexer.identifiers);
-                    free(lexer.indices);
-                    free(lexer.intern_string_lookup);
-                    free(lexer.interned_strings);
+                    point_to_error(source, start, start+width);
+                    lexer_free(&lexer);
                     return (TokenArray) { name, source, NULL, NULL, NULL, 0, NULL, 0 };
                 }
             } break;
         }
     }
 }
+

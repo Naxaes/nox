@@ -17,6 +17,23 @@ typedef struct {
     NodeId     stack_count;
 } Parser;
 
+void parser_free(Parser* parser) {
+    free(parser->nodes);
+    free(parser->views);
+    free(parser->stack);
+    token_array_free(parser->tokens);
+}
+
+UntypedAst parser_to_ast(Parser* parser, Node* start) {
+    free(parser->stack);
+    return (UntypedAst) {
+        parser->tokens,
+        parser->nodes,
+        start,
+        parser->views
+    };
+}
+
 static inline Token current(Parser* parser) {
     return parser->tokens.tokens[parser->current_token_id];
 }
@@ -234,8 +251,7 @@ UntypedAst parse(TokenArray tokens) {
                 fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(tokens.name), lexer_repr_of(tokens, parser.current_token_id));
                 int start = (int) tokens.indices[parser.current_token_id];
                 point_to_error(tokens.source, start, start+1);
-                free(parser.nodes);
-                return (UntypedAst) { tokens, NULL, NULL, NULL };
+                goto error;
             } break;
             case Token_Identifier: {
                 if (peek(&parser) == Token_Equal) {
@@ -263,17 +279,26 @@ UntypedAst parse(TokenArray tokens) {
 
                 node = add_node(&parser, (Node) { .block = block });
 
-                return (UntypedAst) { tokens, parser.nodes, node, parser.views };
+                return parser_to_ast(&parser, node);
             }
         }
 
-        if (node == 0)
-            return (UntypedAst) { tokens, NULL, NULL, NULL };
+        if (node == 0) {
+            goto error;
+        }
 
         parser.stack[parser.stack_count++] = node;
     }
 
     fprintf(stderr, "Unexpected end of token stream\n");
-    free(parser.nodes);
+    error:;
+    parser_free(&parser);
     return (UntypedAst) { tokens, NULL, NULL, NULL };
+}
+
+
+void grammar_tree_free(UntypedAst ast) {
+    free(ast.nodes);
+    free(ast.views);
+    token_array_free(ast.tokens);
 }

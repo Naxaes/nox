@@ -79,3 +79,5 @@ typedef struct {
 } UntypedAst;
 
 UntypedAst parse(TokenArray tokens);
+
+void grammar_tree_free(UntypedAst ast);
