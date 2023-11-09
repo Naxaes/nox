@@ -36,7 +36,7 @@ static IdentId intern_string(Lexer* lexer, Str string) {
         }
 
         const char* candidate = (const char*) (lexer->interned_strings + offset);
-        if (strncmp(string.data, candidate, 1024) == 0) {
+        if (strncmp(string.data, candidate, string.size) == 0) {
             // We found a match! Returned the cached offset.
             return offset;
         } else {

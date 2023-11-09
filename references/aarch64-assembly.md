@@ -12,7 +12,7 @@ Interesting chapters:
 
 ## Utilities
 Compile a C file to assembly
-```bash
+```bast h
 clang -o a.s -S -arch arm64 a.c
 ```
 Compile an assembly to an object file

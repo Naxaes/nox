@@ -34,6 +34,7 @@ set(SOURCES
     src/interpreter/interpreter.c
     src/file.c
     src/str.c
+    src/args.c
     src/jit_compiler/jit.c
     src/os/memory.c
     src/transpiler/c_transpiler.c

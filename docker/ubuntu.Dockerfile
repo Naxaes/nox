@@ -52,4 +52,4 @@ RUN cmake --build .
 WORKDIR /app
 
 # Run the C program
-CMD ["./build/nox"]
+CMD ["./build/nox", "run", "examples/identifier.nox"]
