@@ -7,23 +7,27 @@
 
 typedef struct {
     TokenArray tokens;
-    TokenId    current_token;
+    TokenId    current_token_id;
     Node*      nodes;
     NodeId     node_count;
 } Parser;
 
 static inline Token current(Parser* parser) {
-    return parser->tokens.tokens[parser->current_token];
+    return parser->tokens.tokens[parser->current_token_id];
 }
 
 static inline Token peek(Parser* parser) {
-    if (parser->current_token + 1 >= parser->tokens.size)
+    if (parser->current_token_id + 1 >= parser->tokens.size)
         return Token_Eof;
-    return parser->tokens.tokens[parser->current_token + 1];
+    return parser->tokens.tokens[parser->current_token_id + 1];
 }
 
 static inline TokenId advance(Parser* parser) {
-    return parser->current_token++;
+    return parser->current_token_id++;
+}
+
+static inline const char* repr_of_current(Parser* parser) {
+    return lexer_repr_of(parser->tokens, parser->current_token_id);
 }
 
 static inline Node* add_node(Parser* parser, Node node) {
@@ -107,18 +111,19 @@ static Node* precedence(Parser* parser, Precedence precedence) {
 static Node* number(Parser* parser) {
     assert(current(parser) == Token_Number && "Expected number token");
 
-    const char* repr = lexer_repr_of(parser->tokens, parser->current_token);
+    const char* repr = repr_of_current(parser);
     i64 value = strtoll(repr, NULL, 10);
     advance(parser);
 
-    NodeLiteral literal = { NodeKind_Literal, .type=Literal_Integer, .value.integer = value };
+    NodeLiteral literal = { NodeKind_Literal, .type = Literal_Integer, .value.integer = value };
     return add_node(parser, (Node) { .literal = literal });
 }
 
 static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
-    NodeBinary binary;
+    assert(token_is_binary_operator(token) && "Expected binary operator");
 
+    NodeBinary binary;
     switch (token) {
         case Token_Plus: {
             binary = (NodeBinary) { NodeKind_Binary, .left=left, .right=0, .op='+' };
@@ -127,10 +132,9 @@ static Node* binary(Parser* parser, Node* left) {
             binary = (NodeBinary) { NodeKind_Binary, .left=left, .right=0, .op='*' };
         } break;
         default: {
-            fprintf(stderr, "Unexpected path\n");
-            return NULL;
+            assert(0 && "Invalid binary operator");
         }
-    }
+}
 
     NodeId id = reserve_node(parser);
     advance(parser);
@@ -150,7 +154,7 @@ static Node* expression(Parser* parser) {
 static Node* assignment(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected number token");
 
-    const char* repr = lexer_repr_of(parser->tokens, parser->current_token);
+    const char* repr = repr_of_current(parser);
     advance(parser);
 
     if (current(parser) != Token_Equal) {
@@ -169,7 +173,7 @@ static Node* assignment(Parser* parser) {
 UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
-        .current_token = 0,
+        .current_token_id = 0,
         .nodes = (Node*) malloc(1024),
         .node_count = 0,
     };
@@ -179,7 +183,7 @@ UntypedAst parse(TokenArray tokens) {
     add_node(&parser, (Node) { NodeKind_Invalid });
     Node* node = 0;
 
-    while (parser.current_token < tokens.size) {
+    while (parser.current_token_id < tokens.size) {
         Token token = current(&parser);
 
         switch (token) {
@@ -202,7 +206,7 @@ UntypedAst parse(TokenArray tokens) {
                 node = expression(&parser);
             } break;
             case Token_Eof: {
-                return (UntypedAst) {parser.nodes, node };
+                return (UntypedAst) { parser.nodes, node };
             }
         }
 

@@ -9,12 +9,19 @@ typedef enum {
     Token_Invalid,
     Token_Number,
     Token_Identifier,
-    Token_Plus,
-    Token_Asterisk,
+    Token_Binary_Operator_Start,
+        Token_Plus = Token_Binary_Operator_Start,
+        Token_Asterisk,
+    Token_Binary_Operator_End = Token_Asterisk,
     Token_Equal,
     Token_Eof,
 } Token;
 #define TOKEN_COUNT (Token_Eof + 1)
+
+static inline int token_is_binary_operator(Token token) {
+    return Token_Binary_Operator_Start <= token && token <= Token_Binary_Operator_End;
+}
+
 
 typedef struct {
     Token*   tokens;
@@ -27,7 +34,7 @@ typedef struct {
 
 
 /// Lex the source to a token array.
-TokenArray lexer_lex(const char* source);
+TokenArray lexer_lex(Str source);
 
 /// Get the textual representation of a token.
 const char* lexer_repr_of(TokenArray tokens, TokenId id);
