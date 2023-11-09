@@ -20,6 +20,12 @@ typedef enum {
 
 typedef struct {
     NodeKind kind;
+    TokenId  start;
+    TokenId  end;
+} NodeBase;
+
+typedef struct {
+    NodeBase base;
     enum {
         Literal_Invalid,
         Literal_Integer,
@@ -32,30 +38,31 @@ typedef struct {
 } NodeLiteral;
 
 typedef struct {
-    NodeKind kind;
+    NodeBase base;
     const char* name;
 } NodeIdentifier;
 
 typedef struct {
-    NodeKind kind;
+    NodeBase base;
     Node*    left;
     Node*    right;
     char     op;
 } NodeBinary;
 
 typedef struct {
-    NodeKind kind;
+    NodeBase base;
     const char* name;
     Node* expression;
 } NodeVarDecl;
 
 typedef struct {
-    NodeKind kind;
+    NodeBase base;
     Node**   nodes;
 } NodeBlock;
 
 union Node {
     NodeKind        kind;
+    NodeBase        base;
     NodeLiteral     literal;
     NodeIdentifier  identifier;
     NodeBinary      binary;
@@ -64,6 +71,8 @@ union Node {
 };
 
 typedef struct {
+    TokenArray tokens;
+
     Node*  nodes;
     Node*  start;
     Node** views;

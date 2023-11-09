@@ -11,6 +11,9 @@ typedef struct {
 #define STR(literal) ((Str) { sizeof(literal)-1, (literal) })
 #define STR_EMPTY ((Str) {0, NULL})
 
+#define STR_FMT "%.*s"
+#define STR_ARG(str) (int)(str).size, (str).data
+
 
 static inline int str_is_empty(Str str) {
     return str.size == 0;
@@ -32,4 +35,18 @@ static inline int str_compare(Str a, Str b) {
 
 static inline Str str_from_c_str(const char* cstr) {
     return (Str) { strlen(cstr), cstr };
+}
+
+static inline Str str_line_at(Str source, size_t index) {
+    size_t start = index;
+    while (start > 0 && source.data[start-1] != '\n') {
+        start -= 1;
+    }
+
+    size_t end = index;
+    while (end < source.size && source.data[end] != '\n') {
+        end += 1;
+    }
+
+    return (Str) { end - start, source.data + start };
 }

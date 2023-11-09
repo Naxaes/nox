@@ -8,6 +8,7 @@ typedef u32 IdentId;
 typedef enum {
     Token_Invalid,
     Token_Number,
+    Token_Real,
     Token_Identifier,
     Token_Binary_Operator_Start,
         Token_Plus = Token_Binary_Operator_Start,
@@ -24,8 +25,12 @@ static inline int token_is_binary_operator(Token token) {
 
 
 typedef struct {
+    Str name;
+    Str source;
+
     Token*   tokens;
     IdentId* identifiers;
+    size_t*  indices;
     size_t   size;
 
     u8*    interned_strings;
@@ -34,7 +39,7 @@ typedef struct {
 
 
 /// Lex the source to a token array.
-TokenArray lexer_lex(Str source);
+TokenArray lexer_lex(Str name, Str source);
 
 /// Get the textual representation of a token.
 const char* lexer_repr_of(TokenArray tokens, TokenId id);

@@ -1,8 +1,21 @@
 #include "checker.h"
+#include "error.h"
 
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+
+
+const char* type_repr_of(TypeId type) {
+    switch (type) {
+        case Literal_Integer: return "int";
+        case Literal_Real:    return "real";
+        default:
+            assert(0 && "Not implemented");
+    }
+    assert(0 && "Invalid type id");
+    return NULL;
+}
 
 
 typedef struct {
@@ -43,14 +56,30 @@ TypeId type_check_identifier(Checker* checker, NodeIdentifier identifier) {
             return local->type;
         }
     }
-    fprintf(stderr, "Unknown identifier: '%s'\n", identifier.name);
+    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->ast.tokens.name), identifier.name);
+    int start = (int) checker->ast.tokens.indices[identifier.base.start];
+    int end   = (int) checker->ast.tokens.indices[identifier.base.end];
+    const char* repr = lexer_repr_of(checker->ast.tokens, identifier.base.end);
+
+    point_to_error(checker->ast.tokens.source, start, end + strlen(repr));
     return 0;
 }
 
-TypeId type_check_binary(Checker* checker, NodeBinary literal) {
-    TypeId left  = type_check_expression(checker, literal.left);
-    TypeId right = type_check_expression(checker, literal.right);
+TypeId type_check_binary(Checker* checker, NodeBinary binary) {
+    TypeId left  = type_check_expression(checker, binary.left);
+    if (left == 0)
+        return 0;
+    TypeId right = type_check_expression(checker, binary.right);
+    if (right == 0)
+        return 0;
+
     if (left != right) {
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%c' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary.op, type_repr_of(left), type_repr_of(right));
+        int start = (int) checker->ast.tokens.indices[binary.base.start];
+        int end   = (int) checker->ast.tokens.indices[binary.base.end];
+        const char* repr = lexer_repr_of(checker->ast.tokens, binary.base.end);
+
+        point_to_error(checker->ast.tokens.source, start, end + strlen(repr));
         return 0;
     }
     return left;

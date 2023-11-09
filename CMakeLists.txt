@@ -35,6 +35,8 @@ set(SOURCES
     src/file.c
     src/str.c
     src/args.c
+    src/utf8.c
+    src/error.c
     src/jit_compiler/jit.c
     src/os/memory.c
     src/transpiler/c_transpiler.c
