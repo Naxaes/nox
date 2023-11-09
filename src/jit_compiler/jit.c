@@ -68,7 +68,6 @@ JitFunction jit_compile_aarch64(Bytecode code) {
 
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
-        printf("Compiling instruction %d\n", instruction);
         switch (instruction) {
             case Instruction_Invalid: {
                 fprintf(stderr, "[WARN]: Invalid instruction\n");
@@ -178,7 +177,6 @@ JitFunction jit_compile_x86_64(Bytecode code) {
 
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
-        printf("Compiling instruction %d\n", instruction);
         switch (instruction) {
             case Instruction_Invalid: {
                 fprintf(stderr, "[WARN]: Invalid instruction\n");
@@ -257,14 +255,14 @@ JitFunction jit_compile_x86_64(Bytecode code) {
 
 
 
-JitFunction jit_compile(Bytecode code) {
+JitFunction jit_compile(Bytecode code, int output) {
 #if defined(__x86_64__)
-    printf("[INFO]: JIT compiling for x86_64\n");
+    if (output) printf("[INFO]: JIT compiling for x86_64\n");
     JitFunction function =  jit_compile_x86_64(code);
     if (function == NULL)
         return NULL;
 #elif defined(__aarch64__)
-    printf("[INFO]: JIT compiling for aarch64\n");
+    if (output) printf("[INFO]: JIT compiling for aarch64\n");
     JitFunction function = jit_compile_aarch64(code);
     if (function == NULL)
         return NULL;
@@ -274,6 +272,9 @@ JitFunction jit_compile(Bytecode code) {
 #endif
 
 #ifdef OUTPUT_JIT
+    if (!output)
+        return function;
+
     FILE* file = fopen(OUTPUT_JIT ".bin", "wb");
     assert(file != NULL && "Failed to open " OUTPUT_JIT);
     fwrite((void*)function, code.size, 1, file);

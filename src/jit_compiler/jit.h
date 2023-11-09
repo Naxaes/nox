@@ -6,4 +6,4 @@
 typedef i64 (*JitFunction)(void);
 
 
-JitFunction jit_compile(Bytecode code);
+JitFunction jit_compile(Bytecode code, int output);

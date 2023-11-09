@@ -218,7 +218,7 @@ UntypedAst parse(TokenArray tokens) {
                 if (peek(&parser) == Token_Equal) {
                     node = assignment(&parser);
                 } else {
-                    node = identifier(&parser);
+                    node = expression(&parser);
                 }
             } break;
             case Token_Number: {

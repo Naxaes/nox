@@ -141,11 +141,5 @@ Bytecode generate_code(TypedAst ast) {
         mov_reg(&generator, 0, generator.current_register);
     }
     generator.instructions[generator.count++] = Instruction_Exit;
-
-    for (size_t i = 0; i < generator.count; ++i) {
-        printf("%d ", generator.instructions[i]);
-    }
-    printf("\n");
-
     return (Bytecode) { generator.instructions, generator.count };
 }

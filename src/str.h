@@ -29,3 +29,7 @@ static inline int str_compare(Str a, Str b) {
         return (int)a.size - (int)b.size;
     return memcmp(a.data, b.data, a.size);
 }
+
+static inline Str str_from_c_str(const char* cstr) {
+    return (Str) { strlen(cstr), cstr };
+}
