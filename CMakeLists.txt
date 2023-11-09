@@ -26,7 +26,6 @@ elseif(UNIX)
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -arch x86_64")
 set(SOURCES
     src/lexer/lexer.c
     src/parser/parser.c

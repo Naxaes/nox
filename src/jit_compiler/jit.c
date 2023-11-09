@@ -68,6 +68,7 @@ JitFunction jit_compile_aarch64(Bytecode code) {
 
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
+        printf("Compiling instruction %d\n", instruction);
         switch (instruction) {
             case Instruction_Invalid: {
                 fprintf(stderr, "[WARN]: Invalid instruction\n");
@@ -91,6 +92,13 @@ JitFunction jit_compile_aarch64(Bytecode code) {
                     return NULL;
                 machine_code[size++] = inst;
             } break;
+            case Instruction_Mov: {
+                // MOV Xd, Xn
+                u8 dst = code.instructions[++i];
+                u8 src = code.instructions[++i];
+                u32 inst = aarch64_mov_reg(dst, src);
+                machine_code[size++] = inst;
+            } break;
             case Instruction_Add: {
                 // ADD Xd, Xn, Xm
                 u8 dst = code.instructions[++i];
@@ -105,15 +113,22 @@ JitFunction jit_compile_aarch64(Bytecode code) {
                 u32 inst = aarch64_mul(dst, src);
                 machine_code[size++] = inst;
             } break;
-            case Instruction_Exit: {
-                u32 inst = aarch64_ret();
-                machine_code[size++] = inst;
-            } break;
             case Instruction_Store: {
                 // MOV Xd, Xn, Xm
                 u8 dst = code.instructions[++i];
                 u8 src = code.instructions[++i];
                 u32 inst = aarch64_mov_reg(dst, src);
+                machine_code[size++] = inst;
+            } break;
+            case Instruction_Load: {
+                // MOV Xd, Xn, Xm
+                u8 dst = code.instructions[++i];
+                u8 src = code.instructions[++i];
+                u32 inst = aarch64_mov_reg(dst, src);
+                machine_code[size++] = inst;
+            } break;
+            case Instruction_Exit: {
+                u32 inst = aarch64_ret();
                 machine_code[size++] = inst;
             } break;
         }
@@ -163,6 +178,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
 
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
+        printf("Compiling instruction %d\n", instruction);
         switch (instruction) {
             case Instruction_Invalid: {
                 fprintf(stderr, "[WARN]: Invalid instruction\n");
@@ -190,6 +206,14 @@ JitFunction jit_compile_x86_64(Bytecode code) {
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;
+            case Instruction_Mov: {
+                // movl %enx %enx
+                u8 dst   = code.instructions[++i];
+                u8 src   = code.instructions[++i];
+                u8 inst[] = x86_64_mov_reg(dst, src);
+                memcpy(&machine_code[size], inst, sizeof(inst));
+                size += sizeof(inst);
+            } break;
             case Instruction_Add: {
                 // addl %enx %enx
                 u8 dst   = code.instructions[++i];
@@ -212,7 +236,14 @@ JitFunction jit_compile_x86_64(Bytecode code) {
                 u8 inst[] = x86_64_mov_reg(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
-            }
+             } break;
+            case Instruction_Load: {
+                u8 dst   = code.instructions[++i];
+                u8 src   = code.instructions[++i];
+                u8 inst[] = x86_64_mov_reg(dst, src);
+                memcpy(&machine_code[size], inst, sizeof(inst));
+                size += sizeof(inst);
+            } break;
             case Instruction_Exit: {
                 u8 inst = x86_64_ret();
                 machine_code[size++] = inst;

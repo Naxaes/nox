@@ -31,6 +31,7 @@ static IdentId intern_string(Lexer* lexer, Str string) {
             memset(lexer->interned_strings + lexer->interned_string_size + string.size, '\0', 1);
 
             lexer->interned_string_size += string.size + 1;
+            lexer->intern_string_lookup[index] = offset;
             return offset;
         }
 

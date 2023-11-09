@@ -12,25 +12,31 @@ typedef struct {
 } Generator;
 
 
-Register mov_imm64(Generator* generator, NodeLiteral literal) {
+Register mov_imm64(Generator* generator, u8 dest, u64 immediate) {
     generator->instructions[generator->count++] = Instruction_MovImm64;
-    generator->instructions[generator->count++] = generator->current_register;
-    generator->instructions[generator->count++] = (literal.value.integer >> 0)  & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 8)  & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 16) & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 24) & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 32) & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 40) & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 48) & 0xFF;
-    generator->instructions[generator->count++] = (literal.value.integer >> 56) & 0xFF;
-    return generator->current_register++;
+    generator->instructions[generator->count++] = dest;
+    generator->instructions[generator->count++] = (immediate >> 0) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 8) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 16) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 24) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 32) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 40) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 48) & 0xFF;
+    generator->instructions[generator->count++] = (immediate >> 56) & 0xFF;
+    return dest;
+}
+
+Register mov_reg(Generator* generator, Register dest, Register source) {
+    generator->instructions[generator->count++] = Instruction_Mov;
+    generator->instructions[generator->count++] = dest;
+    generator->instructions[generator->count++] = source;
+    return dest;
 }
 
 Register add(Generator* generator, Register dest, Register source) {
     generator->instructions[generator->count++] = Instruction_Add;
     generator->instructions[generator->count++] = dest;
     generator->instructions[generator->count++] = source;
-    generator->current_register--; // We don't need the source register anymore
     return dest;
 }
 
@@ -38,7 +44,6 @@ Register mul(Generator* generator, Register dest, Register source) {
     generator->instructions[generator->count++] = Instruction_Mul;
     generator->instructions[generator->count++] = dest;
     generator->instructions[generator->count++] = source;
-    generator->current_register--; // We don't need the source register anymore
     return dest;
 }
 
@@ -54,12 +59,30 @@ Register generate_for_expression(Generator* generator, TypedAst ast, Node* node)
     switch (node->kind) {
         case NodeKind_Invalid:
         case NodeKind_VarDecl:
+        case NodeKind_Block:
             assert(0 && "Invalid node kind");
+            return 0;
         case NodeKind_Literal:
-            return mov_imm64(generator, node->literal);
+            return mov_imm64(generator, generator->current_register++, node->literal.value.integer);
+        case NodeKind_Identifier: {
+            Block* current = ast.blocks;
+            for (size_t i = 0; i < current->count; ++i) {
+                Local* local = current->locals + i;
+                assert(local->decl.kind == NodeKind_VarDecl && "Invalid node kind");
+                if (local->decl.var_decl.name == node->identifier.name) {
+                    generator->instructions[generator->count++] = Instruction_Load;
+                    generator->instructions[generator->count++] = generator->current_register;
+                    generator->instructions[generator->count++] = i;
+                    return generator->current_register++;
+                }
+            }
+            fprintf(stderr, "Unknown identifier: '%s'\n", node->identifier.name);
+            return 0;
+        } break;
         case NodeKind_Binary: {
             Register dest   = generate_for_expression(generator, ast, node->binary.left);
             Register source = generate_for_expression(generator, ast, node->binary.right);
+            generator->current_register--;  // Consume the expression register
             switch (node->binary.op) {
                 case '+': {
                     return add(generator, dest, source);
@@ -77,6 +100,32 @@ Register generate_for_expression(Generator* generator, TypedAst ast, Node* node)
     }
 }
 
+void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
+    switch (node->kind) {
+        case NodeKind_Invalid:
+            assert(0 && "Invalid node kind");
+            break;
+        case NodeKind_Literal:
+        case NodeKind_Identifier:
+        case NodeKind_Binary: {
+            generate_for_expression(generator, ast, node);
+            generator->current_register--;  // Consume the expression register
+        } break;
+        case NodeKind_VarDecl: {
+            Register dest = generator->current_register++;
+            Register src = generate_for_expression(generator, ast, node->var_decl.expression);
+            generator->current_register--;  // Consume the expression register
+            store(generator, dest, src);
+        } break;
+        case NodeKind_Block: {
+            NodeBlock block = node->block;
+            while ((node = *block.nodes++) != NULL) {
+                generate_for_statement(generator, ast, node);
+            }
+        } break;
+    }
+}
+
 
 Bytecode generate_code(TypedAst ast) {
     Generator generator = {
@@ -86,23 +135,17 @@ Bytecode generate_code(TypedAst ast) {
     };
 
     Node* node = ast.start;
-    switch (node->kind) {
-        case NodeKind_Invalid: {
-            fprintf(stderr, "Unknown node kind: '%d'\n", node->kind);
-            free(generator.instructions);
-            return (Bytecode) { NULL, 0 };
-        } break;
-        case NodeKind_Literal:
-        case NodeKind_Binary: {
-            generate_for_expression(&generator, ast, node);
-        } break;
-        case NodeKind_VarDecl: {
-            Register dest = generator.current_register++;
-            Register src = generate_for_expression(&generator, ast, node->var_decl.expression);
-            store(&generator, dest, src);
-        } break;
-    }
+    generate_for_statement(&generator, ast, node);
 
+    if (generator.current_register > 0) {
+        mov_reg(&generator, 0, generator.current_register);
+    }
     generator.instructions[generator.count++] = Instruction_Exit;
+
+    for (size_t i = 0; i < generator.count; ++i) {
+        printf("%d ", generator.instructions[i]);
+    }
+    printf("\n");
+
     return (Bytecode) { generator.instructions, generator.count };
 }

@@ -14,7 +14,7 @@
 
 int main(void) {
 
-    Str source = read_file("examples/assignment.nox");
+    Str source = read_file("examples/identifier.nox");
     if (str_is_empty(source)) {
         fprintf(stderr, "Failed to read file\n");
         return 1;

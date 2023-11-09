@@ -7,9 +7,11 @@
 typedef enum {
     Instruction_Invalid,
     Instruction_MovImm64,
+    Instruction_Mov,
     Instruction_Add,
     Instruction_Mul,
     Instruction_Store,
+    Instruction_Load,
     Instruction_Exit,
 } Instruction;
 

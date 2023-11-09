@@ -10,6 +10,10 @@ typedef struct {
     TokenId    current_token_id;
     Node*      nodes;
     NodeId     node_count;
+    Node**     views;
+    NodeId     view_count;
+    Node**     stack;
+    NodeId     stack_count;
 } Parser;
 
 static inline Token current(Parser* parser) {
@@ -48,6 +52,7 @@ static inline Node* set_node(Parser* parser, NodeId id, Node node) {
 
 
 static Node* number(Parser*);
+static Node* identifier(Parser*);
 static Node* binary(Parser* parser, Node* left);
 
 
@@ -76,7 +81,7 @@ typedef struct {
 ParseRule rules[] = {
         [Token_Invalid]     =   { NULL,         NULL,         Precedence_None},
         [Token_Number]      =   { number,       NULL,         Precedence_None},
-        [Token_Identifier]  =   { NULL,         NULL,         Precedence_None},
+        [Token_Identifier]  =   { identifier,   NULL,         Precedence_None},
         [Token_Plus]        =   { NULL,         binary,       Precedence_Term},
         [Token_Asterisk]    =   { NULL,         binary,       Precedence_Factor},
         [Token_Equal]       =   { NULL,         NULL,         Precedence_None},
@@ -117,6 +122,16 @@ static Node* number(Parser* parser) {
 
     NodeLiteral literal = { NodeKind_Literal, .type = Literal_Integer, .value.integer = value };
     return add_node(parser, (Node) { .literal = literal });
+}
+
+static Node* identifier(Parser* parser) {
+    assert(current(parser) == Token_Identifier && "Expected identifier token");
+
+    const char* repr = repr_of_current(parser);
+    advance(parser);
+
+    NodeIdentifier ident = { NodeKind_Identifier, .name = repr };
+    return add_node(parser, (Node) { .identifier = ident });
 }
 
 static Node* binary(Parser* parser, Node* left) {
@@ -176,11 +191,15 @@ UntypedAst parse(TokenArray tokens) {
         .current_token_id = 0,
         .nodes = (Node*) malloc(1024),
         .node_count = 0,
+        .views = (Node**) malloc(1024),
+        .view_count = 0,
+        .stack = (Node**) malloc(1024),
+        .stack_count = 0,
     };
 
     // Reserve one slot so that any references to 0 are invalid,
     // as no nodes should be able to reference a start node.
-    add_node(&parser, (Node) { NodeKind_Invalid });
+    reserve_node(&parser);
     Node* node = 0;
 
     while (parser.current_token_id < tokens.size) {
@@ -193,28 +212,43 @@ UntypedAst parse(TokenArray tokens) {
             case Token_Invalid: {
                 fprintf(stderr, "Invalid token: '%d'\n", token);
                 free(parser.nodes);
-                return (UntypedAst) { NULL, 0 };
+                return (UntypedAst) { NULL, NULL, NULL };
             } break;
             case Token_Identifier: {
                 if (peek(&parser) == Token_Equal) {
                     node = assignment(&parser);
                 } else {
-                    assert("TODO");
+                    node = identifier(&parser);
                 }
             } break;
             case Token_Number: {
                 node = expression(&parser);
             } break;
             case Token_Eof: {
-                return (UntypedAst) { parser.nodes, node };
+                for (size_t i = 0; i < parser.stack_count; ++i) {
+                    parser.views[parser.view_count++] = parser.stack[i];
+                }
+                parser.views[parser.view_count++] = 0;
+
+                Node** statements = parser.views + (parser.view_count - parser.stack_count - 1);
+                NodeBlock block = { NodeKind_Block, .nodes = statements };
+
+                parser.stack_count = 0;
+                parser.view_count += parser.stack_count + 1;
+
+                node = add_node(&parser, (Node) { .block = block });
+
+                return (UntypedAst) { parser.nodes, node, parser.views };
             }
         }
 
         if (node == 0)
-            return (UntypedAst) { NULL, 0 };
+            return (UntypedAst) { NULL, NULL, NULL };
+
+        parser.stack[parser.stack_count++] = node;
     }
 
     fprintf(stderr, "Unexpected end of token stream\n");
     free(parser.nodes);
-    return (UntypedAst) { NULL, 0 };
+    return (UntypedAst) { NULL, NULL, NULL };
 }

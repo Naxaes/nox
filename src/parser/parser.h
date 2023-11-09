@@ -12,8 +12,10 @@ typedef union Node Node;
 typedef enum {
     NodeKind_Invalid,
     NodeKind_Literal,
+    NodeKind_Identifier,
     NodeKind_Binary,
     NodeKind_VarDecl,
+    NodeKind_Block,
 } NodeKind;
 
 typedef struct {
@@ -31,6 +33,11 @@ typedef struct {
 
 typedef struct {
     NodeKind kind;
+    const char* name;
+} NodeIdentifier;
+
+typedef struct {
+    NodeKind kind;
     Node*    left;
     Node*    right;
     char     op;
@@ -42,16 +49,24 @@ typedef struct {
     Node* expression;
 } NodeVarDecl;
 
-union Node {
+typedef struct {
     NodeKind kind;
-    NodeLiteral literal;
-    NodeBinary  binary;
-    NodeVarDecl var_decl;
+    Node**   nodes;
+} NodeBlock;
+
+union Node {
+    NodeKind        kind;
+    NodeLiteral     literal;
+    NodeIdentifier  identifier;
+    NodeBinary      binary;
+    NodeVarDecl     var_decl;
+    NodeBlock       block;
 };
 
 typedef struct {
-    Node* nodes;
-    Node* start;
+    Node*  nodes;
+    Node*  start;
+    Node** views;
 } UntypedAst;
 
 UntypedAst parse(TokenArray tokens);

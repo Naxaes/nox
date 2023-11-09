@@ -40,6 +40,11 @@ i64 interpret(Bytecode code) {
 
                 interpreter.registers[register_index] = value;
             } break;
+            case Instruction_Mov: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[source];
+            } break;
             case Instruction_Add: {
                 Register dest   = interpreter.instructions[interpreter.ip++];
                 Register source = interpreter.instructions[interpreter.ip++];
@@ -51,6 +56,11 @@ i64 interpret(Bytecode code) {
                 interpreter.registers[dest] *= interpreter.registers[source];
             } break;
             case Instruction_Store: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[source];
+            } break;
+            case Instruction_Load: {
                 Register dest   = interpreter.instructions[interpreter.ip++];
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] = interpreter.registers[source];
