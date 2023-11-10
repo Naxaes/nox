@@ -58,6 +58,8 @@ Register generate_for_literal(Generator* generator, TypedAst ast, NodeLiteral li
             return mov_imm64(generator, generator->current_register++, literal.value.integer);
         case Literal_Real:
             return mov_imm64(generator, generator->current_register++, literal.value.real);
+        case Literal_String:
+            return mov_imm64(generator, generator->current_register++, (u64) literal.value.string);
         default:
             assert(0 && "Invalid literal type");
             return 0;

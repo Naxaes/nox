@@ -11,6 +11,7 @@ const char* type_repr_of(TypeId type) {
         case Literal_Boolean: return "bool";
         case Literal_Integer: return "int";
         case Literal_Real:    return "real";
+        case Literal_String:  return "string";
         default:
             assert(0 && "Not implemented");
     }

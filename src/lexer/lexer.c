@@ -123,6 +123,26 @@ static inline Str parse_number(const char* source, Token* token) {
     return (Str) { (size_t)(end-start), start };
 }
 
+static inline Str parse_string(const char* source) {
+    // Skip the first quote.
+    const char* start = source + 1;
+    do {
+        ++source;
+    } while (*source != '"' && *source != '\0');
+    const char* end = source;
+
+    if (*source == '"') {
+        ++source;
+        return (Str) { (size_t)(end-start), start };
+    } else {
+        fprintf(stderr, "[Error] (Lexer) Unterminated string literal.\n");
+        size_t length = (size_t)(end-start);
+        point_to_error((Str) { length, start }, 0, length);
+        return STR_EMPTY;
+    }
+}
+
+
 static inline int add_single_token(Lexer* lexer, const char* current, Token token) {
     lexer->indices[lexer->count] = current - lexer->source.data;
     lexer->tokens[lexer->count++] = (Token) { token };
@@ -178,6 +198,7 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
 
         case Token_Number:
         case Token_Real:
+        case Token_String:
         case Token_Identifier: {
             size_t offset = tokens.identifiers[id];
             const char* repr = (const char*) &tokens.interned_strings[offset];
@@ -258,6 +279,14 @@ TokenArray lexer_lex(Str name, Str source) {
             } break;
             case '}': {
                 current += add_single_token(&lexer, current, Token_Close_Brace);
+            } break;
+            case '"': {
+                Str string = parse_string(current);
+                if (str_is_empty(string)) {
+                    lexer_free(&lexer);
+                    return (TokenArray) { name, source, NULL, NULL, NULL, 0, NULL, 0 };
+                }
+                current += add_token_with_identifier(&lexer, current, Token_String, string) + 2;
             } break;
             default: {
                 if (is_digit(*current)) {
