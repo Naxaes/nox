@@ -108,6 +108,7 @@ static TokenArray lexer_to_token_array(Lexer* lexer, Str name) {
 }
 
 static Str parse_identifier(const char* source) {
+    assert(is_identifier_start(*source) && "Expected a start of identifier");
     const char* start = source;
     do {
         ++source;
@@ -118,6 +119,7 @@ static Str parse_identifier(const char* source) {
 }
 
 static Str parse_number(const char* source, Token* token) {
+    assert(is_digit(*source) && "Expected a digit");
     const char* start = source;
     do {
         ++source;
@@ -137,23 +139,57 @@ static Str parse_number(const char* source, Token* token) {
     return (Str) { (size_t)(end-start), start };
 }
 
-static Str parse_string(const char* source) {
+static Str parse_string(const char* source, int* is_valid) {
+    assert(*source == '"' && "Expected a quote");
     // Skip the first quote.
     const char* start = source + 1;
+    continue_parsing:;
     do {
         ++source;
     } while (*source != '"' && *source != '\0');
     const char* end = source;
 
     if (*source == '"') {
+        if (*(source-1) == '\\')  // Quote is escaped.
+            goto continue_parsing;
+
         ++source;
+        *is_valid = 1;
         return (Str) { (size_t)(end-start), start };
     } else {
         fprintf(stderr, "[Error] (Lexer) Unterminated string literal.\n");
         size_t length = (size_t)(end-start);
         point_to_error((Str) { length, start }, 0, length);
+        *is_valid = 0;
         return STR_EMPTY;
     }
+}
+
+static const char* parse_line_comment(const char* source) {
+    assert(*source == '/' && *(source+1) == '/' && "Expected a line comment");
+    while (*source != '\n' && *source != '\0')
+        ++source;
+    return source;
+}
+
+static const char* parse_block_comment(const char* source) {
+    assert(*source == '/' && *(source+1) == '*' && "Expected a block comment");
+    source += 2;
+
+    while (*source != '\0' && !(*source == '*' && *(source+1) == '/')) {
+        if (*source == '/' && *(source+1) == '*') {
+            source = parse_block_comment(source);
+        } else {
+            ++source;
+        }
+    }
+    if (*source == '\0') {
+        fprintf(stderr, "[Error] (Lexer) Unterminated block comment.\n");
+        point_to_error((Str) { 2, source-2 }, 0, 2);
+    } else {
+        source += 2;
+    }
+    return source;
 }
 
 
@@ -208,6 +244,7 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
         case Token_Open_Brace:        return "{";
         case Token_Close_Brace:       return "}";
         case Token_Comma:             return ",";
+        case Token_Colon:             return ":";
         case Token_Colon_Equal:       return ":=";
         case Token_If:                return "if";
         case Token_Else:              return "else";
@@ -236,6 +273,7 @@ TokenArray lexer_lex(Str name, Str source) {
     };
 
     const char* current = source.data;
+    retry:;
     while (1) {
         // Skip whitespace.
         while (is_whitespace(*current)) {
@@ -250,11 +288,21 @@ TokenArray lexer_lex(Str name, Str source) {
             case '+': {
                 current += add_single_token(&lexer, current, Token_Plus);
             } break;
+            case '-': {
+                current += add_single_token(&lexer, current, Token_Minus);
+            } break;
             case '*': {
                 current += add_single_token(&lexer, current, Token_Asterisk);
             } break;
             case '/': {
-                current += add_single_token(&lexer, current, Token_Slash);
+                if (*(current+1) == '/') {
+                    current = parse_line_comment(current);
+                    goto retry;
+                } else if (*(current+1) == '*') {
+                    current = parse_block_comment(current);
+                } else {
+                    current += add_single_token(&lexer, current, Token_Slash);
+                }
             } break;
             case '%': {
                 current += add_single_token(&lexer, current, Token_Percent);
@@ -269,7 +317,7 @@ TokenArray lexer_lex(Str name, Str source) {
                 if (*(current+1) == '=')
                     current += add_double_token(&lexer, current, Token_Colon_Equal);
                 else
-                    assert(0 && "Not implemented");
+                    current += add_single_token(&lexer, current, Token_Colon);
             } break;
             case '=': {
                 if (*(current+1) == '=')
@@ -305,8 +353,9 @@ TokenArray lexer_lex(Str name, Str source) {
                 current += add_single_token(&lexer, current, Token_Comma);
             } break;
             case '"': {
-                Str string = parse_string(current);
-                if (str_is_empty(string)) {
+                int is_valid = 0;
+                Str string = parse_string(current, &is_valid);
+                if (!is_valid) {
                     lexer_free(&lexer);
                     return (TokenArray) { name, source, NULL, NULL, NULL, 0, NULL, 0 };
                 }
