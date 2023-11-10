@@ -109,6 +109,12 @@ TypeId type_check_binary(Checker* checker, NodeBinary binary) {
         return left;
 }
 
+TypeId type_check_call(Checker* checker, NodeCall call) {
+    (void)checker;
+    (void)call;
+    return -1;
+}
+
 TypeId type_check_var_decl(Checker* checker, NodeVarDecl var_decl) {
     TypeId expr = type_check_expression(checker, var_decl.expression);
     if (expr == 0)
@@ -210,6 +216,8 @@ TypeId type_check_expression(Checker* checker, Node* node) {
             return type_check_identifier(checker, node->identifier);
         case NodeKind_Binary:
             return type_check_binary(checker, node->binary);
+        case NodeKind_Call:
+            return type_check_call(checker, node->call);
         default:
             assert(0 && "not implemented");
     }
@@ -221,6 +229,7 @@ TypeId type_check_statement(Checker* checker, Node* node) {
         case NodeKind_Literal:
         case NodeKind_Identifier:
         case NodeKind_Binary:
+        case NodeKind_Call:
             return type_check_expression(checker, node);
         case NodeKind_Assign:
             return type_check_assignment(checker, node->assign);

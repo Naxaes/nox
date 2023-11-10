@@ -23,6 +23,7 @@ typedef enum {
     Instruction_Load,
     Instruction_Jmp,
     Instruction_JmpZero,
+    Instruction_Print,
     Instruction_Exit,
 } Instruction;
 

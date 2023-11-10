@@ -14,6 +14,7 @@ typedef enum {
     NodeKind_Literal,
     NodeKind_Identifier,
     NodeKind_Binary,
+    NodeKind_Call,
     NodeKind_Assign,
     NodeKind_VarDecl,
     NodeKind_Block,
@@ -73,6 +74,12 @@ int binary_op_is_comparison(NodeBinary binary);
 typedef struct {
     NodeBase base;
     const char* name;
+    Node** args;
+} NodeCall;
+
+typedef struct {
+    NodeBase base;
+    const char* name;
     Node* expression;
 } NodeAssign;
 
@@ -107,6 +114,7 @@ union Node {
     NodeLiteral     literal;
     NodeIdentifier  identifier;
     NodeBinary      binary;
+    NodeCall        call;
     NodeAssign      assign;
     NodeVarDecl     var_decl;
     NodeBlock       block;

@@ -58,6 +58,7 @@ int node_is_expression(Node* node) {
     switch (node->kind) {
         case NodeKind_Literal:
         case NodeKind_Identifier:
+        case NodeKind_Call:
         case NodeKind_Binary:
             return 1;
         default:
@@ -138,9 +139,13 @@ static Node* number(Parser*);
 static Node* real(Parser*);
 static Node* string(Parser* parser);
 static Node* identifier(Parser*);
+static Node* group(Parser*);
+
 static Node* binary(Parser* parser, Node* left);
+static Node* call(Parser* parser, Node* left);
 
 static Node* statement(Parser* parser);
+static Node* expression(Parser* parser);
 
 
 typedef enum {
@@ -185,6 +190,8 @@ ParseRule rules[] = {
         [Token_Exclamation]         = { NULL,         NULL,         Precedence_None},
         [Token_Equal]               = { NULL,         NULL,         Precedence_None},
         [Token_If]                  = { NULL,         NULL,         Precedence_None},
+        [Token_Open_Paren]          = { group,        call,         Precedence_Call},
+        [Token_Close_Paren]         = { NULL,         NULL,         Precedence_None},
         [Token_Open_Brace]          = { NULL,         NULL,         Precedence_None},
         [Token_Close_Brace]         = { NULL,         NULL,         Precedence_None},
         [Token_Eof]                 = { NULL,         NULL,         Precedence_None},
@@ -261,6 +268,7 @@ static Node* identifier(Parser* parser) {
     return add_node(parser, (Node) { .identifier = ident });
 }
 
+
 static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
     assert(token_is_binary_operator(token) && "Expected binary operator");
@@ -315,9 +323,74 @@ static Node* binary(Parser* parser, Node* left) {
     return set_node(parser, id, (Node) { .binary = binary });
 }
 
+static Node* call(Parser* parser, Node* left) {
+    assert(current(parser) == Token_Open_Paren && "Expected '(' token");
+    assert(left->kind == NodeKind_Identifier && "Expected identifier node");
+    TokenId start = parser->current_token_id;
+    advance(parser);
+
+    size_t stack_count = parser->stack_count;
+
+    Token token = current(parser);
+    Node* node = NULL;
+    while (token != Token_Close_Paren && token != Token_Eof) {
+        node = expression(parser);
+        if (node == NULL) {
+            return NULL;
+        }
+        parser->stack[parser->stack_count++] = node;
+        token = current(parser);
+
+        if (current(parser) != Token_Comma) {
+            break;
+        }
+    }
+
+    token = current(parser);
+    if (token != Token_Close_Paren) {
+        fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
+        int begin = (int) parser->tokens.indices[parser->current_token_id];
+        point_to_error(parser->tokens.source, begin, start+1);
+        return NULL;
+    }
+    advance(parser);
+
+    Node** expressions = parser->views + parser->view_count;
+    for (size_t i = stack_count; i < parser->stack_count; ++i) {
+        parser->views[parser->view_count++] = parser->stack[i];
+    }
+    parser->views[parser->view_count++] = NULL;
+
+    NodeCall call = { { NodeKind_Call, start, node == NULL ? start : node->base.end }, .name = left->identifier.name, .args = expressions };
+    return add_node(parser, (Node) { .call = call });
+}
+
 
 static Node* expression(Parser* parser) {
     return precedence(parser, Precedence_Assignment);
+}
+
+
+static Node* group(Parser* parser) {
+    Token token = current(parser);
+    assert(token == Token_Open_Paren && "Expected '(' token");
+    advance(parser);
+
+    Node* expr = expression(parser);
+    if (expr == NULL) {
+        return NULL;
+    }
+
+    token = current(parser);
+    if (token != Token_Close_Paren) {
+        fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
+        int start = (int) parser->tokens.indices[parser->current_token_id];
+        point_to_error(parser->tokens.source, start, start+1);
+        return NULL;
+    }
+    advance(parser);
+
+    return expr;
 }
 
 
@@ -470,6 +543,7 @@ static Node* statement(Parser* parser) {
         case Token_Greater:
         case Token_Exclamation:
         case Token_Colon_Equal:
+        case Token_Close_Paren:
         case Token_Close_Brace:
         case Token_Else:
         case Token_Invalid: {
@@ -489,7 +563,8 @@ static Node* statement(Parser* parser) {
         } break;
         case Token_Number:
         case Token_Real:
-        case Token_String: {
+        case Token_String:
+        case Token_Open_Paren: {
             return expression(parser);
         } break;
         case Token_Open_Brace: {

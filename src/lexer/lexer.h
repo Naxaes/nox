@@ -41,8 +41,12 @@ typedef enum {
     Token_While,
     Token_Keywords_End = Token_While,
 
+    Token_Open_Paren,
+    Token_Close_Paren,
     Token_Open_Brace,
     Token_Close_Brace,
+
+    Token_Comma,
 
     Token_Eof,
 } Token;
