@@ -145,6 +145,15 @@ void generate_for_var_decl(Generator* generator, TypedAst ast, NodeVarDecl var_d
 }
 
 void generate_for_if_stmt(Generator* generator, TypedAst ast, NodeIf if_stmt) {
+    /*
+     * if condition == 0 goto else
+     *    statements
+     * jmp end
+     * else:
+     *    statements
+     * end:
+     */
+
     Register condition = generate_for_expression(generator, ast, if_stmt.condition);
     generator->current_register--;  // Consume the expression register
 
@@ -155,7 +164,19 @@ void generate_for_if_stmt(Generator* generator, TypedAst ast, NodeIf if_stmt) {
 
     generate_for_statement(generator, ast, (Node*) if_stmt.then_block);
 
-    *jump_to_else = (u8) generator->count;
+    if (if_stmt.else_block != NULL) {
+        generator->instructions[generator->count++] = Instruction_Jmp;
+        u8* jump_to_end = generator->instructions + generator->count;
+        generator->instructions[generator->count++] = Instruction_Invalid;
+
+        *jump_to_else = (u8) generator->count;
+
+        generate_for_statement(generator, ast, (Node*) if_stmt.else_block);
+        *jump_to_end = (u8) generator->count;
+    } else {
+        *jump_to_else = (u8) generator->count;
+    }
+
 }
 
 void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {

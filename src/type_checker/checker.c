@@ -170,6 +170,9 @@ TypeId type_check_if_stmt(Checker* checker, NodeIf if_stmt) {
     if (type_check_block(checker, *if_stmt.then_block) == 0)
         return 0;
 
+    if (if_stmt.else_block != NULL && type_check_block(checker, *if_stmt.then_block) == 0)
+        return 0;
+
     return -1;
 }
 

@@ -21,6 +21,7 @@ typedef enum {
     Instruction_Gt,
     Instruction_Store,
     Instruction_Load,
+    Instruction_Jmp,
     Instruction_JmpZero,
     Instruction_Exit,
 } Instruction;
