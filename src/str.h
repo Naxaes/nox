@@ -27,10 +27,10 @@ static inline u64 str_hash(Str str) {
     return hash;
 }
 
-static inline int str_compare(Str a, Str b) {
+static inline int str_equals(Str a, Str b) {
     if (a.size != b.size)
-        return (int)a.size - (int)b.size;
-    return memcmp(a.data, b.data, a.size);
+        return 0;
+    return memcmp(a.data, b.data, a.size) == 0;
 }
 
 static inline Str str_from_c_str(const char* cstr) {

@@ -8,6 +8,7 @@
 
 const char* type_repr_of(TypeId type) {
     switch (type) {
+        case Literal_Boolean: return "bool";
         case Literal_Integer: return "int";
         case Literal_Real:    return "real";
         default:
@@ -36,7 +37,6 @@ void checker_free(Checker* checker) {
 }
 
 TypedAst checker_to_ast(Checker* checker) {
-    grammar_tree_free(checker->ast);
     return (TypedAst) {
         checker->ast.nodes,
         checker->blocks,
@@ -58,6 +58,7 @@ void push_block(Checker* checker) {
 
 
 TypeId type_check_expression(Checker* checker, Node* node);
+TypeId type_check_statement(Checker* checker, Node* node);
 
 
 TypeId type_check_literal(Checker* checker, NodeLiteral literal) {
@@ -92,7 +93,7 @@ TypeId type_check_binary(Checker* checker, NodeBinary binary) {
         return 0;
 
     if (left != right) {
-        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%c' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary.op, type_repr_of(left), type_repr_of(right));
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary), type_repr_of(left), type_repr_of(right));
         int start = (int) checker->ast.tokens.indices[binary.base.start];
         int end   = (int) checker->ast.tokens.indices[binary.base.end];
         const char* repr = lexer_repr_of(checker->ast.tokens, binary.base.end);
@@ -100,7 +101,11 @@ TypeId type_check_binary(Checker* checker, NodeBinary binary) {
         point_to_error(checker->ast.tokens.source, start, end + strlen(repr));
         return 0;
     }
-    return left;
+
+    if (binary_op_is_comparison(binary))
+        return Literal_Boolean;
+    else
+        return left;
 }
 
 TypeId type_check_var_decl(Checker* checker, NodeVarDecl var_decl) {
@@ -115,43 +120,42 @@ TypeId type_check_var_decl(Checker* checker, NodeVarDecl var_decl) {
     return -1;
 }
 
+TypeId type_check_block(Checker* checker, NodeBlock block) {
+    Node* node = NULL;
+    while ((node = *block.nodes++) != NULL) {
+        if (type_check_statement(checker, node) == 0)
+            return 0;
+    }
+    return -1;
+}
 
 TypeId type_check_expression(Checker* checker, Node* node) {
+    assert(node_is_expression(node) && "Not an expression");
     switch (node->kind) {
-        case NodeKind_Invalid:
-        case NodeKind_VarDecl:
-        case NodeKind_Block:
-            assert(0 && "Invalid node kind");
-            return 0;
         case NodeKind_Literal:
             return type_check_literal(checker, node->literal);
         case NodeKind_Identifier:
             return type_check_identifier(checker, node->identifier);
         case NodeKind_Binary:
             return type_check_binary(checker, node->binary);
+        default:
+            assert(0 && "not implemented");
     }
 }
 
 TypeId type_check_statement(Checker* checker, Node* node) {
+    assert(node_is_statement(node) && "Not a statement");
     switch (node->kind) {
-        case NodeKind_Invalid:
-            assert(0 && "Invalid node kind");
         case NodeKind_Literal:
-            return type_check_literal(checker, node->literal);
         case NodeKind_Identifier:
-            return type_check_identifier(checker, node->identifier);
         case NodeKind_Binary:
-            return type_check_binary(checker, node->binary);
+            return type_check_expression(checker, node);
         case NodeKind_VarDecl:
             return type_check_var_decl(checker, node->var_decl);
-        case NodeKind_Block: {
-            NodeBlock block = node->block;
-            while ((node = *block.nodes++) != NULL) {
-                if (type_check_statement(checker, node) == 0)
-                    return 0;
-            }
-            return -1;
-        }
+        case NodeKind_Block:
+            return type_check_block(checker, node->block);
+        default:
+            assert(0 && "not implemented");
     }
 }
 

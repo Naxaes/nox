@@ -50,10 +50,55 @@ i64 interpret(Bytecode code) {
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] += interpreter.registers[source];
             } break;
+            case Instruction_Sub: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] -= interpreter.registers[source];
+            } break;
             case Instruction_Mul: {
                 Register dest   = interpreter.instructions[interpreter.ip++];
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] *= interpreter.registers[source];
+            } break;
+            case Instruction_Div: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] /= interpreter.registers[source];
+            } break;
+            case Instruction_Mod: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] %= interpreter.registers[source];
+            } break;
+            case Instruction_Lt: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[dest] < interpreter.registers[source];
+            } break;
+            case Instruction_Le: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[dest] <= interpreter.registers[source];
+            } break;
+            case Instruction_Eq: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[dest] == interpreter.registers[source];
+            } break;
+            case Instruction_Ne: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[dest] != interpreter.registers[source];
+            } break;
+            case Instruction_Ge: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[dest] >= interpreter.registers[source];
+            } break;
+            case Instruction_Gt: {
+                Register dest   = interpreter.instructions[interpreter.ip++];
+                Register source = interpreter.instructions[interpreter.ip++];
+                interpreter.registers[dest] = interpreter.registers[dest] > interpreter.registers[source];
             } break;
             case Instruction_Store: {
                 Register dest   = interpreter.instructions[interpreter.ip++];

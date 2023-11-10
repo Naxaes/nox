@@ -122,10 +122,16 @@ static inline Str parse_number(const char* source, Token* token) {
     return (Str) { (size_t)(end-start), start };
 }
 
-static inline int add_token(Lexer* lexer, const char* current, Token token) {
+static inline int add_single_token(Lexer* lexer, const char* current, Token token) {
     lexer->indices[lexer->count] = current - lexer->source.data;
     lexer->tokens[lexer->count++] = (Token) { token };
     return 1;
+}
+
+static inline int add_double_token(Lexer* lexer, const char* current, Token token) {
+    lexer->indices[lexer->count] = current - lexer->source.data;
+    lexer->tokens[lexer->count++] = (Token) { token };
+    return 2;
 }
 
 static inline int add_token_with_identifier(Lexer* lexer, const char* current, Token token, Str identifier) {
@@ -136,14 +142,33 @@ static inline int add_token_with_identifier(Lexer* lexer, const char* current, T
     return identifier.size;
 }
 
+static Token token_from_string(Str string) {
+    if (str_equals(string, STR("if")))
+        return Token_If;
+    return Token_Identifier;
+}
+
 const char* lexer_repr_of(TokenArray tokens, TokenId id) {
     Token token = tokens.tokens[id];
     switch (token) {
-        case Token_Invalid:  return "<Invalid>";
-        case Token_Plus:     return "+";
-        case Token_Asterisk: return "*";
-        case Token_Equal:    return "=";
-        case Token_Eof:      return "<EOF>";
+        case Token_Invalid:           return "<Invalid>";
+        case Token_Plus:              return "+";
+        case Token_Asterisk:          return "*";
+        case Token_Equal:             return "=";
+        case Token_Eof:               return "<EOF>";
+        case Token_Minus:             return "-";
+        case Token_Slash:             return "/";
+        case Token_Percent:           return "%";
+        case Token_Less:              return "<";
+        case Token_Less_Equal:        return "<=";
+        case Token_Equal_Equal:       return "==";
+        case Token_Exclamation_Equal: return "!=";
+        case Token_Greater_Equal:     return ">=";
+        case Token_Greater:           return ">";
+        case Token_Exclamation:       return "!";
+        case Token_Open_Brace:        return "{";
+        case Token_Close_Brace:        return "}";
+        case Token_If:                return "if";
 
         case Token_Number:
         case Token_Real:
@@ -177,17 +202,44 @@ TokenArray lexer_lex(Str name, Str source) {
 
         switch (*current) {
             case '\0': {
-                add_token(&lexer, current, Token_Eof);
+                add_single_token(&lexer, current, Token_Eof);
                 return lexer_to_token_array(&lexer, name);
             } break;
             case '+': {
-                current += add_token(&lexer, current, Token_Plus);
+                current += add_single_token(&lexer, current, Token_Plus);
             } break;
             case '*': {
-                current += add_token(&lexer, current, Token_Asterisk);
+                current += add_single_token(&lexer, current, Token_Asterisk);
+            } break;
+            case '/': {
+                current += add_single_token(&lexer, current, Token_Slash);
+            } break;
+            case '%': {
+                current += add_single_token(&lexer, current, Token_Percent);
+            } break;
+            case '>': {
+                if (*(current+1) == '=')
+                    current += add_double_token(&lexer, current, Token_Greater_Equal);
+                else
+                    current += add_single_token(&lexer, current, Token_Greater);
             } break;
             case '=': {
-                current += add_token(&lexer, current, Token_Equal);
+                if (*(current+1) == '=')
+                    current += add_double_token(&lexer, current, Token_Equal_Equal);
+                else
+                    current += add_single_token(&lexer, current, Token_Equal);
+            } break;
+            case '!': {
+                if (*(current+1) == '=')
+                    current += add_double_token(&lexer, current, Token_Exclamation_Equal);
+                else
+                    current += add_single_token(&lexer, current, Token_Exclamation);
+            } break;
+            case '<': {
+                if (*(current+1) == '=')
+                    current += add_double_token(&lexer, current, Token_Less_Equal);
+                else
+                    current += add_single_token(&lexer, current, Token_Less);
             } break;
             default: {
                 if (is_digit(*current)) {
@@ -196,7 +248,8 @@ TokenArray lexer_lex(Str name, Str source) {
                     current += add_token_with_identifier(&lexer, current, token, string);
                 } else if (is_identifier_start(*current)) {
                     Str string = parse_identifier(current);
-                    current += add_token_with_identifier(&lexer, current, Token_Identifier, string);
+                    Token keyword_or_ident = token_from_string(string);
+                    current += add_token_with_identifier(&lexer, current, keyword_or_ident, string);
                 } else {
                     int width = multi_byte_count(*current);
                     if (width == 0) width = 1;

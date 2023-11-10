@@ -13,7 +13,7 @@ RUN apt-get -y update && apt-get install -y
 RUN apt-get -y install clang
 
 # Install the llvm for diassemble tools
-RUN apt-get -y install llvm
+RUN apt-get -y install gdb
 
 # Install the Clang compiler
 RUN apt-get -y install cmake
@@ -24,6 +24,9 @@ RUN apt-get -y install vim
 # Make sure we have the pthread library (required for Google Test)
 RUN apt-get -y install libpthread-stubs0-dev
 
+# Install the lldb for debugging in the Docker container
+RUN apt-get -y install lldb
+
 # Create a non-root user
 RUN adduser nox
 
@@ -31,16 +34,16 @@ RUN adduser nox
 RUN mkdir -p build
 
 # Copy our tests
-COPY ../tests tests
+COPY tests tests
 
 # Copy your C program source code and any required files
-COPY ../CMakeLists.txt .
+COPY CMakeLists.txt .
 
 # Copy your C program source code and any required files
-COPY ../src src
+COPY src src
 
 # Copy our example nox programs
-COPY ../examples examples
+COPY examples examples
 
 # Move into the build directory
 WORKDIR /app/build
@@ -52,4 +55,4 @@ RUN cmake --build .
 WORKDIR /app
 
 # Run the C program
-CMD ["./build/nox", "run", "examples/identifier.nox"]
+CMD ["./build/nox", "run", "examples/conditions.nox"]

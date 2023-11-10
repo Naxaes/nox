@@ -11,6 +11,9 @@ typedef struct {
     u8  current_register;
 } Generator;
 
+Register generate_for_expression(Generator* generator, TypedAst ast, Node* node);
+
+
 
 Register mov_imm64(Generator* generator, u8 dest, u64 immediate) {
     generator->instructions[generator->count++] = Instruction_MovImm64;
@@ -33,18 +36,11 @@ Register mov_reg(Generator* generator, Register dest, Register source) {
     return dest;
 }
 
-Register add(Generator* generator, Register dest, Register source) {
-    generator->instructions[generator->count++] = Instruction_Add;
-    generator->instructions[generator->count++] = dest;
-    generator->instructions[generator->count++] = source;
-    return dest;
-}
-
-Register mul(Generator* generator, Register dest, Register source) {
-    generator->instructions[generator->count++] = Instruction_Mul;
-    generator->instructions[generator->count++] = dest;
-    generator->instructions[generator->count++] = source;
-    return dest;
+Register bin_op(Generator* generator, Instruction binary_instruction, Register dst, Register src) {
+    generator->instructions[generator->count++] = binary_instruction;
+    generator->instructions[generator->count++] = dst;
+    generator->instructions[generator->count++] = src;
+    return dst;
 }
 
 Register store(Generator* generator, Register dest, Register source) {
@@ -54,75 +50,103 @@ Register store(Generator* generator, Register dest, Register source) {
     return dest;
 }
 
-
-Register generate_for_expression(Generator* generator, TypedAst ast, Node* node) {
-    switch (node->kind) {
-        case NodeKind_Invalid:
-        case NodeKind_VarDecl:
-        case NodeKind_Block:
-            assert(0 && "Invalid node kind");
+Register generate_for_literal(Generator* generator, TypedAst ast, NodeLiteral literal) {
+    switch (literal.type) {
+        case Literal_Boolean:
+            return mov_imm64(generator, generator->current_register++, literal.value.integer != 0);
+        case Literal_Integer:
+            return mov_imm64(generator, generator->current_register++, literal.value.integer);
+        case Literal_Real:
+            return mov_imm64(generator, generator->current_register++, literal.value.real);
+        default:
+            assert(0 && "Invalid literal type");
             return 0;
-        case NodeKind_Literal:
-            return mov_imm64(generator, generator->current_register++, node->literal.value.integer);
-        case NodeKind_Identifier: {
-            Block* current = ast.blocks;
-            for (size_t i = 0; i < current->count; ++i) {
-                Local* local = current->locals + i;
-                assert(local->decl.kind == NodeKind_VarDecl && "Invalid node kind");
-                if (local->decl.var_decl.name == node->identifier.name) {
-                    generator->instructions[generator->count++] = Instruction_Load;
-                    generator->instructions[generator->count++] = generator->current_register;
-                    generator->instructions[generator->count++] = i;
-                    return generator->current_register++;
-                }
-            }
-            fprintf(stderr, "Unknown identifier: '%s'\n", node->identifier.name);
-            return 0;
-        } break;
-        case NodeKind_Binary: {
-            Register dest   = generate_for_expression(generator, ast, node->binary.left);
-            Register source = generate_for_expression(generator, ast, node->binary.right);
-            generator->current_register--;  // Consume the expression register
-            switch (node->binary.op) {
-                case '+': {
-                    return add(generator, dest, source);
-                } break;
-                case '*': {
-                    return mul(generator, dest, source);
-                } break;
-                default: {
-                    fprintf(stderr, "Unknown binary operator: '%c'\n", node->binary.op);
-                    assert(0 && "Invalid node kind");
-                    return 0;
-                } break;
-            }
-        } break;
     }
 }
 
-void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
+Register generate_for_identifier(Generator* generator, TypedAst ast, NodeIdentifier identifier) {
+    Block* current = ast.blocks;
+    for (size_t i = 0; i < current->count; ++i) {
+        Local* local = current->locals + i;
+        assert(local->decl.kind == NodeKind_VarDecl && "Invalid node kind");
+        if (local->decl.var_decl.name == identifier.name) {
+            generator->instructions[generator->count++] = Instruction_Load;
+            generator->instructions[generator->count++] = generator->current_register;
+            generator->instructions[generator->count++] = i;
+            return generator->current_register++;
+        }
+    }
+    fprintf(stderr, "Unknown identifier: '%s'\n", identifier.name);
+    return 0;
+}
+
+Register generate_for_binary(Generator* generator, TypedAst ast, NodeBinary binary) {
+    Register dest   = generate_for_expression(generator, ast, binary.left);
+    Register source = generate_for_expression(generator, ast, binary.right);
+    generator->current_register--;  // Consume the expression register
+    static Instruction binary_instructions[] = {
+            [Binary_Operation_Add] = Instruction_Add,
+            [Binary_Operation_Sub] = Instruction_Sub,
+            [Binary_Operation_Mul] = Instruction_Mul,
+            [Binary_Operation_Div] = Instruction_Div,
+            [Binary_Operation_Mod] = Instruction_Mod,
+            [Binary_Operation_Lt]  = Instruction_Lt,
+            [Binary_Operation_Le]  = Instruction_Le,
+            [Binary_Operation_Eq]  = Instruction_Eq,
+            [Binary_Operation_Ne]  = Instruction_Ne,
+            [Binary_Operation_Ge]  = Instruction_Ge,
+            [Binary_Operation_Gt]  = Instruction_Gt,
+    };
+    assert(binary.op <= Binary_Operation_Gt && "Invalid binary operation");
+    Instruction inst = binary_instructions[binary.op];
+    assert(inst != Instruction_Invalid && "Invalid binary operation");
+    return bin_op(generator, inst, dest, source);
+}
+
+Register generate_for_expression(Generator* generator, TypedAst ast, Node* node) {
+    assert(node_is_expression(node) && "Invalid node kind");
     switch (node->kind) {
-        case NodeKind_Invalid:
-            assert(0 && "Invalid node kind");
-            break;
+        case NodeKind_Literal:
+            return generate_for_literal(generator, ast, node->literal);
+        case NodeKind_Identifier:
+            return generate_for_identifier(generator, ast, node->identifier);
+        case NodeKind_Binary:
+            return generate_for_binary(generator, ast, node->binary);
+        default:
+            assert(0 && "not implemented");
+            return 0;
+    }
+}
+
+void generate_for_var_decl(Generator* generator, TypedAst ast, NodeVarDecl var_decl) {
+    Register dest = generator->current_register++;
+    Register src  = generate_for_expression(generator, ast, var_decl.expression);
+    generator->current_register--;  // Consume the expression register
+    store(generator, dest, src);
+}
+
+void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
+    assert(node_is_statement(node) && "Invalid node kind");
+    switch (node->kind) {
         case NodeKind_Literal:
         case NodeKind_Identifier:
         case NodeKind_Binary: {
             generate_for_expression(generator, ast, node);
             generator->current_register--;  // Consume the expression register
         } break;
-        case NodeKind_VarDecl: {
-            Register dest = generator->current_register++;
-            Register src = generate_for_expression(generator, ast, node->var_decl.expression);
-            generator->current_register--;  // Consume the expression register
-            store(generator, dest, src);
-        } break;
+        case NodeKind_VarDecl:
+            generate_for_var_decl(generator, ast, node->var_decl);
+            break;
         case NodeKind_Block: {
             NodeBlock block = node->block;
             while ((node = *block.nodes++) != NULL) {
                 generate_for_statement(generator, ast, node);
             }
-        } break;
+            break;
+        }
+        default:
+            assert(0 && "not implemented");
+            break;
     }
 }
 

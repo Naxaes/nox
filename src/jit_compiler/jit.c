@@ -130,6 +130,10 @@ JitFunction jit_compile_aarch64(Bytecode code) {
                 u32 inst = aarch64_ret();
                 machine_code[size++] = inst;
             } break;
+            default: {
+                fprintf(stderr, "[WARN]: Invalid instruction '%d'\n", instruction);
+                return NULL;
+            } break;
         }
     }
 
@@ -245,6 +249,10 @@ JitFunction jit_compile_x86_64(Bytecode code) {
             case Instruction_Exit: {
                 u8 inst = x86_64_ret();
                 machine_code[size++] = inst;
+            } break;
+            default: {
+                fprintf(stderr, "[WARN]: Invalid instruction '%d'\n", instruction);
+                return NULL;
             } break;
         }
     }
