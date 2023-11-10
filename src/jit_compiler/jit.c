@@ -10,7 +10,7 @@
 
 
 JitFunction jit_compile_aarch64(Bytecode code) {
-    u32* machine_code = malloc(code.size);
+    u32* machine_code = malloc(code.size * sizeof(*machine_code));
     size_t size = 0;
 
     for (size_t i = 0; i < code.size; ++i) {

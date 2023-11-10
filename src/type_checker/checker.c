@@ -181,10 +181,17 @@ static TypeId type_check_assignment(Checker* checker, NodeAssign assign) {
 
 static TypeId type_check_block(Checker* checker, NodeBlock block) {
     Node* node = NULL;
-    while ((node = *block.nodes++) != NULL) {
+    Node** nodes = block.nodes;
+    while ((node = *nodes++) != NULL) {
         if (type_check_statement(checker, node) == 0)
             return 0;
     }
+    return -1;
+}
+
+static TypeId type_check_fun_decl(Checker* checker, NodeFunDecl fun_decl) {
+    (void)checker;
+    (void)fun_decl;
     return -1;
 }
 
@@ -260,6 +267,8 @@ static TypeId type_check_statement(Checker* checker, Node* node) {
             return type_check_while_stmt(checker, node->while_stmt);
         case NodeKind_Block:
             return type_check_block(checker, node->block);
+        case NodeKind_FunDecl:
+            return type_check_fun_decl(checker, node->fun_decl);
         default:
             assert(0 && "not implemented");
     }
