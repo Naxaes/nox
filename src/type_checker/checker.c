@@ -36,7 +36,6 @@ void checker_free(Checker* checker) {
 }
 
 TypedAst checker_to_ast(Checker* checker) {
-    grammar_tree_free(checker->ast);
     return (TypedAst) {
         checker->ast.nodes,
         checker->blocks,
