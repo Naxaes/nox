@@ -56,7 +56,7 @@ InterpreterResult run(Str name, Str source, int verbose) {
 
     i64 result = interpret(code);
 
-    // compile_c(code);
+    compile_c(code);
     return (InterpreterResult) { result, 0 };
 }
 

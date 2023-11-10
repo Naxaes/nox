@@ -14,6 +14,7 @@ typedef enum {
     NodeKind_Literal,
     NodeKind_Identifier,
     NodeKind_Binary,
+    NodeKind_Assign,
     NodeKind_VarDecl,
     NodeKind_Block,
     NodeKind_If,
@@ -70,6 +71,12 @@ typedef struct {
     NodeBase base;
     const char* name;
     Node* expression;
+} NodeAssign;
+
+typedef struct {
+    NodeBase base;
+    const char* name;
+    Node* expression;
 } NodeVarDecl;
 
 typedef struct {
@@ -89,6 +96,7 @@ union Node {
     NodeLiteral     literal;
     NodeIdentifier  identifier;
     NodeBinary      binary;
+    NodeAssign      assign;
     NodeVarDecl     var_decl;
     NodeBlock       block;
     NodeIf          if_stmt;

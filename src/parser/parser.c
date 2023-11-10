@@ -309,7 +309,7 @@ static Node* expression(Parser* parser) {
 
 
 static Node* assignment(Parser* parser) {
-    assert(current(parser) == Token_Identifier && "Expected number token");
+    assert(current(parser) == Token_Identifier && "Expected identifier token");
     TokenId start = parser->current_token_id;
 
     const char* repr = repr_of_current(parser);
@@ -317,6 +317,25 @@ static Node* assignment(Parser* parser) {
 
     if (current(parser) != Token_Equal) {
         fprintf(stderr, "Expected '=' after identifier\n");
+        return NULL;
+    }
+
+    advance(parser);
+    Node* expr = expression(parser);
+
+    NodeAssign assign = { { NodeKind_Assign, start, expr->base.end }, .name = repr, .expression = expr };
+    return add_node(parser, (Node) { .assign = assign });
+}
+
+static Node* var_decl(Parser* parser) {
+    assert(current(parser) == Token_Identifier && "Expected identifier token");
+    TokenId start = parser->current_token_id;
+
+    const char* repr = repr_of_current(parser);
+    advance(parser);
+
+    if (current(parser) != Token_Colon_Equal) {
+        fprintf(stderr, "Expected ':=' after identifier\n");
         return NULL;
     }
 
@@ -354,17 +373,15 @@ static Node* block(Parser* parser) {
     advance(parser);
 
 
+    Node** statements = parser->views + parser->view_count;
     for (size_t i = stack_count; i < parser->stack_count; ++i) {
         parser->views[parser->view_count++] = parser->stack[i];
     }
     parser->views[parser->view_count++] = NULL;
 
-    Node** statements = parser->views + (parser->view_count - parser->stack_count - 1);
     NodeBlock block = { { NodeKind_Block, start, node->base.end }, .nodes = statements };
 
     parser->stack_count = stack_count;
-    parser->view_count += parser->stack_count + 1;
-
     return add_node(parser, (Node) { .block = block });
 }
 
@@ -405,6 +422,7 @@ static Node* statement(Parser* parser) {
         case Token_Greater_Equal:
         case Token_Greater:
         case Token_Exclamation:
+        case Token_Colon_Equal:
         case Token_Close_Brace:
         case Token_Invalid: {
             fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
@@ -413,7 +431,9 @@ static Node* statement(Parser* parser) {
             return NULL;
         } break;
         case Token_Identifier: {
-            if (peek(parser) == Token_Equal) {
+            if (peek(parser) == Token_Colon_Equal) {
+                return var_decl(parser);
+            } else if (peek(parser) == Token_Equal) {
                 return assignment(parser);
             } else {
                 return expression(parser);
