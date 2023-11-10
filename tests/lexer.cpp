@@ -5,26 +5,26 @@ using testing::ElementsAre;
 
 #include <vector>
 #include <string>
+#include <algorithm>
 
 extern "C" {
 #include "lexer/lexer.h"
 }
 
 
-TEST(LexerTest, TokenizationTest) {
-    // Prepare test input
-    static const char* source = "34 + 34 + 1";
-    TokenArray token_array = lexer_lex(source);
+void test_tokenization(Str source, std::vector<Token> expected_tokens, std::vector<std::string> expected_reprs) {
+    TokenArray token_array = lexer_lex(STR("<test>"), source);
+
+    expected_tokens.push_back(Token_Eof);
+    expected_reprs.emplace_back("<EOF>");
+
+    EXPECT_EQ(token_array.size, expected_tokens.size());
+    size_t size = std::min((size_t)token_array.size, expected_tokens.size());
 
     std::vector<Token> tokens(token_array.tokens, token_array.tokens+token_array.size);
-    EXPECT_THAT(tokens, testing::ElementsAre(
-            Token_Number,
-            Token_Plus,
-            Token_Number,
-            Token_Plus,
-            Token_Number,
-            Token_Eof
-    ));
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(token_array.tokens[i], expected_tokens[i]);
+    }
 
     std::vector<std::string> reprs;
     reprs.reserve(token_array.size);
@@ -32,13 +32,109 @@ TEST(LexerTest, TokenizationTest) {
         reprs.emplace_back(lexer_repr_of(token_array, i));
     }
 
-    std::string expected_strings[] = {
-            "34",
-            "+",
-            "34",
-            "+",
-            "1",
-            "<EOF>"
-    };
-    EXPECT_THAT(reprs, testing::ElementsAreArray(expected_strings));
+    EXPECT_EQ(reprs.size(), expected_reprs.size());
+    size = std::min(reprs.size(), expected_reprs.size());
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(reprs[i], expected_reprs[i]);
+    }
 }
+
+TEST(LexerTest, Empty) {
+    test_tokenization(STR(""), {}, {});
+}
+
+TEST(LexerTest, ValidNumber) {
+    test_tokenization(STR("0"), { Token_Number }, { "0" });
+    test_tokenization(STR("123"), { Token_Number, }, { "123" });
+}
+
+TEST(LexerTest, ValidReal) {
+    test_tokenization(STR("0.0"), { Token_Real }, { "0.0" });
+    test_tokenization(STR("1.02"), { Token_Real }, { "1.02" });
+    test_tokenization(STR("0.01"), { Token_Real }, { "0.01" });
+    test_tokenization(STR("123.123"), { Token_Real }, { "123.123" });
+}
+
+TEST(LexerTest, ValidString) {
+    test_tokenization(STR("\"\""), { Token_String }, { "" });
+    test_tokenization(STR("\"a\""), { Token_String }, { "a" });
+    test_tokenization(STR("\"abc\""), { Token_String }, { "abc" });
+    test_tokenization(STR("\"a b c\""), { Token_String }, { "a b c" });
+    test_tokenization(STR("\"a\nb c\""), { Token_String }, { "a\nb c" });
+    test_tokenization(STR(R"("a\nb\tc")"), { Token_String }, { R"(a\nb\tc)" });
+    test_tokenization(STR(R"("a\"b c")"), { Token_String }, { R"(a\"b c)" });
+}
+
+TEST(LexerTest, ValidIdentifier) {
+    test_tokenization(STR("a"), { Token_Identifier }, { "a" });
+    test_tokenization(STR("abc"), { Token_Identifier }, { "abc" });
+    test_tokenization(STR("a_b_c"), { Token_Identifier }, { "a_b_c" });
+    test_tokenization(STR("a0"), { Token_Identifier }, { "a0" });
+    test_tokenization(STR("a0b"), { Token_Identifier }, { "a0b" });
+    test_tokenization(STR("a0_b1_c2"), { Token_Identifier }, { "a0_b1_c2" });
+}
+
+TEST(LexerTest, Keywords) {
+    test_tokenization(STR("if"), { Token_If }, { "if" });
+    test_tokenization(STR("else"), { Token_Else }, { "else" });
+    test_tokenization(STR("while"), { Token_While }, { "while" });
+}
+
+TEST(LexerTest, BinaryOperators) {
+    test_tokenization(STR("+"), { Token_Plus }, { "+" });
+    test_tokenization(STR("-"), { Token_Minus }, { "-" });
+    test_tokenization(STR("*"), { Token_Asterisk }, { "*" });
+    test_tokenization(STR("/"), { Token_Slash }, { "/" });
+    test_tokenization(STR("%"), { Token_Percent }, { "%" });
+
+    test_tokenization(STR("<"), { Token_Less }, { "<" });
+    test_tokenization(STR("<="), { Token_Less_Equal }, { "<=" });
+    test_tokenization(STR("=="), { Token_Equal_Equal }, { "==" });
+    test_tokenization(STR("!="), { Token_Exclamation_Equal }, { "!=" });
+    test_tokenization(STR(">="), { Token_Greater_Equal }, { ">=" });
+    test_tokenization(STR(">"), { Token_Greater }, { ">" });
+}
+
+TEST(LexerTest, Assignment) {
+    test_tokenization(STR("="), { Token_Equal }, { "=" });
+    test_tokenization(STR(":="), { Token_Colon_Equal }, { ":=" });
+}
+
+TEST(LexerTest, Parentheses) {
+    test_tokenization(STR("("), { Token_Open_Paren }, { "(" });
+    test_tokenization(STR(")"), { Token_Close_Paren }, { ")" });
+    test_tokenization(STR("{"), { Token_Open_Brace }, { "{" });
+    test_tokenization(STR("}"), { Token_Close_Brace }, { "}" });
+}
+
+TEST(LexerTest, Comma) {
+    test_tokenization(STR(","), { Token_Comma }, { "," });
+}
+
+TEST(LexerTest, Whitespace) {
+    test_tokenization(STR(" "), {}, {});
+    test_tokenization(STR("\t"), {}, {});
+    test_tokenization(STR("\n"), {}, {});
+    test_tokenization(STR("\r"), {}, {});
+    test_tokenization(STR("\r\n"), {}, {});
+    test_tokenization(STR(" \t\n\r"), {}, {});
+}
+
+TEST(LexerTest, Comments) {
+    test_tokenization(STR("//\n"), {}, {});
+    test_tokenization(STR("//hello\n"), {}, {});
+    test_tokenization(STR("//\r\n"), {}, {});
+    test_tokenization(STR("// testing "), {}, {});
+
+    test_tokenization(STR("/**/"), {}, {});
+    test_tokenization(STR("/*hello*/"), {}, {});
+    test_tokenization(STR("/*hello\n*/"), {}, {});
+    test_tokenization(STR("/*\n\n*/"), {}, {});
+    test_tokenization(STR("/* hello\n /* hello*/ \n*/"), {}, {});
+}
+
+
+
+
+
+

@@ -101,6 +101,7 @@ int multi_byte_count(char byte) {
 int is_whitespace(rune c) {  // TODO(ted): Are there more?
     return c == '\n' ||
            c == '\t' ||
+           c == '\r' ||
            c == ' ';
 }
 
