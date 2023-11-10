@@ -9,7 +9,7 @@ typedef struct {
     size_t stack_size;
     u64*   registers;
     size_t registers_size;
-    u8*    instructions;
+    Instruction* instructions;
     size_t instructions_size;
 } Interpreter;
 
