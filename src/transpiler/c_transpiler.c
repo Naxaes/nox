@@ -17,7 +17,7 @@ int transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
         Instruction instruction = code.instructions[i];
         switch (instruction) {
             case Instruction_Invalid: {
-                fprintf(stderr, "[WARN]: Invalid instruction\n");
+                fprintf(stderr, "[WARN]: (Transpiler) Invalid instruction\n");
                 return -1;
             } break;
             case Instruction_MovImm64: {

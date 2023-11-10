@@ -18,6 +18,7 @@ typedef enum {
     NodeKind_VarDecl,
     NodeKind_Block,
     NodeKind_If,
+    NodeKind_While,
 } NodeKind;
 
 typedef struct {
@@ -91,6 +92,13 @@ typedef struct {
     NodeBlock* else_block;
 } NodeIf;
 
+typedef struct {
+    NodeBase   base;
+    Node*      condition;
+    NodeBlock* then_block;
+    NodeBlock* else_block;
+} NodeWhile;
+
 union Node {
     NodeKind        kind;
     NodeBase        base;
@@ -101,6 +109,7 @@ union Node {
     NodeVarDecl     var_decl;
     NodeBlock       block;
     NodeIf          if_stmt;
+    NodeWhile       while_stmt;
 };
 
 int node_is_expression(Node* node);
