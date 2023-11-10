@@ -127,6 +127,7 @@ int main(int argc, const char* argv[]) {
                 return 1;
             } else {
                 printf("[INFO]: Result: %lld\n", result.result);
+                printf("[INFO]: Result: %s\n",  (char*)result.result);
             }
             break;
         } case SIM: {

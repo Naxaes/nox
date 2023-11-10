@@ -34,10 +34,12 @@ typedef struct {
         Literal_Boolean,
         Literal_Integer,
         Literal_Real,
+        Literal_String,
     } type;
     union {
         u64 integer;
         f64 real;
+        const char* string;
     } value;
 } NodeLiteral;
 

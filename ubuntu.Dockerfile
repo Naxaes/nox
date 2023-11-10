@@ -55,4 +55,4 @@ RUN cmake --build .
 WORKDIR /app
 
 # Run the C program
-CMD ["./build/nox", "run", "examples/while-loop.nox"]
+CMD ["./build/nox", "run", "examples/string.nox"]

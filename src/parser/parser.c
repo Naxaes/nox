@@ -136,6 +136,7 @@ static inline Node* set_node(Parser* parser, NodeId id, Node node) {
 
 static Node* number(Parser*);
 static Node* real(Parser*);
+static Node* string(Parser* parser);
 static Node* identifier(Parser*);
 static Node* binary(Parser* parser, Node* left);
 
@@ -168,6 +169,7 @@ ParseRule rules[] = {
         [Token_Invalid]             = { NULL,         NULL,         Precedence_None},
         [Token_Number]              = { number,       NULL,         Precedence_None},
         [Token_Real]                = { real,         NULL,         Precedence_None},
+        [Token_String]              = { string,       NULL,         Precedence_None},
         [Token_Identifier]          = { identifier,   NULL,         Precedence_None},
         [Token_Minus]               = { NULL,         binary,       Precedence_Term},
         [Token_Plus]                = { NULL,         binary,       Precedence_Term},
@@ -234,6 +236,17 @@ static Node* real(Parser* parser) {
     advance(parser);
 
     NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = Literal_Real, .value.real = value };
+    return add_node(parser, (Node) { .literal = literal });
+}
+
+static Node* string(Parser* parser) {
+    assert(current(parser) == Token_String && "Expected string token");
+    TokenId start = parser->current_token_id;
+
+    const char* repr = repr_of_current(parser);
+    advance(parser);
+
+    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = Literal_String, .value.string = repr };
     return add_node(parser, (Node) { .literal = literal });
 }
 
@@ -341,6 +354,9 @@ static Node* var_decl(Parser* parser) {
 
     advance(parser);
     Node* expr = expression(parser);
+    if (expr == NULL) {
+        return NULL;
+    }
 
     NodeVarDecl var_decl = { { NodeKind_VarDecl, start, expr->base.end }, .name = repr, .expression = expr };
     return add_node(parser, (Node) { .var_decl = var_decl });
@@ -472,7 +488,8 @@ static Node* statement(Parser* parser) {
             }
         } break;
         case Token_Number:
-        case Token_Real: {
+        case Token_Real:
+        case Token_String: {
             return expression(parser);
         } break;
         case Token_Open_Brace: {

@@ -9,6 +9,7 @@ typedef enum {
     Token_Invalid,
     Token_Number,
     Token_Real,
+    Token_String,
     Token_Identifier,
 
     Token_Plus,
