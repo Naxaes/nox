@@ -38,6 +38,7 @@ typedef enum {
     Token_If,
         Token_Keywords_Start = Token_If,
         Token_Else,
+        Token_Fun,
         Token_While,
     Token_Keywords_End = Token_While,
 

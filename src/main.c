@@ -1,7 +1,9 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include "parser/tree_writer.h"
 #include "type_checker/checker.h"
 #include "code_generator/generator.h"
+#include "code_generator/disassembler.h"
 #include "interpreter/interpreter.h"
 #include "jit_compiler/jit.h"
 #include "transpiler/c_transpiler.h"
@@ -34,6 +36,8 @@ InterpreterResult run(Str name, Str source, int verbose) {
         return (InterpreterResult) { 0, 1 };
     }
 
+    tree_write(grammar_tree, stdout);
+
     TypedAst typed_tree = type_check(grammar_tree);
     if (typed_tree.nodes == NULL) {
         fprintf(stderr, "Failed to type check source\n");
@@ -45,6 +49,10 @@ InterpreterResult run(Str name, Str source, int verbose) {
         fprintf(stderr, "Failed to generate code\n");
         return (InterpreterResult) { 0, 1 };
     }
+
+    fprintf(stdout, "\nBytecode:\n");
+    disassemble(code, stdout);
+    printf("\n");
 
     JitFunction jitted_function = jit_compile(code, verbose);
     if (jitted_function) {
@@ -120,7 +128,7 @@ int main(int argc, const char* argv[]) {
                 return 1;
             }
             if (!commands.is_quiet)
-                printf("[INFO]: Source:\n%s\n", source.data);
+                printf("[INFO]: %s\n%s\n", commands.input_file, source.data);
             InterpreterResult result = run(str_from_c_str(commands.input_file), source, !commands.is_quiet);
             if (result.error) {
                 fprintf(stderr, "Failed to run source\n");

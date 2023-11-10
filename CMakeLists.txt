@@ -21,16 +21,18 @@ if(WIN32)
     # Disable warnings for fopen, strcpy, etc.
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 elseif(UNIX)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -Wno-c11-extensions -Wno-gnu-binary-literal")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g")  # memory
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -Wno-c11-extensions -Wno-gnu-binary-literal ")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -fsanitize=fuzzer,address,undefined,leak,signed-integer-overflow")  # memory
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 endif()
 
 set(SOURCES
     src/lexer/lexer.c
     src/parser/parser.c
+    src/parser/tree_writer.c
     src/type_checker/checker.c
     src/code_generator/generator.c
+    src/code_generator/disassembler.c
     src/interpreter/interpreter.c
     src/file.c
     src/str.c
