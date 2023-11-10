@@ -144,8 +144,8 @@ static inline int add_token_with_identifier(Lexer* lexer, const char* current, T
 }
 
 static Token token_from_string(Str string) {
-    if (str_equals(string, STR("if")))
-        return Token_If;
+    if (str_equals(string, STR("if")))    return Token_If;
+    if (str_equals(string, STR("else")))  return Token_Else;
     return Token_Identifier;
 }
 
@@ -168,8 +168,10 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
         case Token_Greater:           return ">";
         case Token_Exclamation:       return "!";
         case Token_Open_Brace:        return "{";
-        case Token_Close_Brace:        return "}";
+        case Token_Close_Brace:       return "}";
+        case Token_Colon_Equal:       return ":=";
         case Token_If:                return "if";
+        case Token_Else:              return "else";
 
         case Token_Number:
         case Token_Real:

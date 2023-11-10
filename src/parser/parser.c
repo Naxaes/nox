@@ -400,7 +400,13 @@ static Node* if_stmt(Parser* parser) {
         return NULL;
     }
 
-    NodeIf if_stmt = { { NodeKind_If, start, then_block->base.end }, .condition = condition, .then_block = (NodeBlock*) then_block };
+    Node* else_block = NULL;
+    if (current(parser) == Token_Else) {
+        advance(parser);
+        else_block = block(parser);
+    }
+
+    NodeIf if_stmt = { { NodeKind_If, start, then_block->base.end }, .condition = condition, .then_block = (NodeBlock*) then_block, .else_block = (NodeBlock*) else_block };
     return add_node(parser, (Node) { .if_stmt = if_stmt });
 }
 
@@ -424,6 +430,7 @@ static Node* statement(Parser* parser) {
         case Token_Exclamation:
         case Token_Colon_Equal:
         case Token_Close_Brace:
+        case Token_Else:
         case Token_Invalid: {
             fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
             int start = (int) parser->tokens.indices[parser->current_token_id];

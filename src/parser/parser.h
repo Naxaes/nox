@@ -88,6 +88,7 @@ typedef struct {
     NodeBase   base;
     Node*      condition;
     NodeBlock* then_block;
+    NodeBlock* else_block;
 } NodeIf;
 
 union Node {

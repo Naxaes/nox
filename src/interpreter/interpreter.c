@@ -110,6 +110,9 @@ i64 interpret(Bytecode code) {
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] = interpreter.registers[source];
             } break;
+            case Instruction_Jmp: {
+                interpreter.ip = interpreter.instructions[interpreter.ip];
+            } break;
             case Instruction_JmpZero: {
                 Register register_index = interpreter.instructions[interpreter.ip++];
                 u64 value = interpreter.registers[register_index];

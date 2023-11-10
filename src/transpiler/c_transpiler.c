@@ -4,13 +4,21 @@
 #include <assert.h>
 
 
-void transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
+int transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
+    u32 labels[256] = { -1 };
+    u32 label_i = 0;
+    u32 label_count = 0;
+
     for (size_t i = from; i < to; ++i) {
+        if (labels[label_i] == i) {
+            fprintf(file, "\tlabel_%d:;\n", labels[label_i++]);
+        }
+
         Instruction instruction = code.instructions[i];
         switch (instruction) {
             case Instruction_Invalid: {
                 fprintf(stderr, "[WARN]: Invalid instruction\n");
-                return;
+                return -1;
             } break;
             case Instruction_MovImm64: {
                 u8 reg = code.instructions[++i];
@@ -24,11 +32,6 @@ void transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
                 value |= (u64) code.instructions[++i] << 40;
                 value |= (u64) code.instructions[++i] << 48;
                 value |= (u64) code.instructions[++i] << 56;
-
-                if (value >= 1uLL << 32) {
-                    printf("[ERROR]: mov only supports 32-bit immediate\n");
-                    return;
-                }
 
                 fprintf(file, "\treg[%d] = %llu;\n", reg, value);
             } break;
@@ -130,14 +133,20 @@ void transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
 
                 fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
             } break;
+            case Instruction_Jmp: {
+                // goto label;
+                u8 label = code.instructions[++i];
+
+                fprintf(file, "\tgoto label_%d;\n", label);
+                labels[label_count++] = label;
+            } break;
             case Instruction_JmpZero: {
                 // if (n == 0) goto label;
                 u8 reg   = code.instructions[++i];
                 u8 label = code.instructions[++i];
 
                 fprintf(file, "\tif (reg[%d] == 0) goto label_%d;\n", reg, label);
-                transpile_instructions(code, file, i + 1, label);
-                fprintf(file, "\tlabel_%d:;\n", label);
+                labels[label_count++] = label;
             } break;
             case Instruction_Exit: {
                 fprintf(file, "\treturn reg[0];\n");
@@ -145,10 +154,12 @@ void transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
             } break;
             default: {
                 fprintf(stderr, "[ERROR] (Transpiler): Invalid instruction '%d'\n", instruction);
-                return;
+                return -1;
             } break;
         }
     }
+
+    return 0;
 }
 
 void compile_c(Bytecode code) {
