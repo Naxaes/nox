@@ -6,32 +6,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <wchar.h>
 #include <assert.h>
 
 
-typedef struct {
-    Str source;
-
-    size_t   count;
-    Token*   tokens;
-    IdentId* identifiers;
-    size_t*  indices;
-
-    u32*   intern_string_lookup;
-    u8*    interned_strings;
-    size_t interned_string_size;
-} Lexer;
-
-
-void lexer_free(Lexer* lexer) {
-    free(lexer->tokens);
-    free(lexer->identifiers);
-    free(lexer->indices);
-    free(lexer->intern_string_lookup);
-    free(lexer->interned_strings);
-}
-
+/* ---------------------------- TOKEN ARRAY -------------------------------- */
 void token_array_free(TokenArray tokens) {
     free(tokens.tokens);
     free(tokens.identifiers);
@@ -39,48 +17,49 @@ void token_array_free(TokenArray tokens) {
     free(tokens.interned_strings);
 }
 
-TokenArray lexer_to_token_array(Lexer* lexer, Str name) {
-    free(lexer->intern_string_lookup);
-    return (TokenArray) {
-            name,
-            lexer->source,
-            lexer->tokens,
-            lexer->identifiers,
-            lexer->indices,
-            lexer->count,
-            lexer->interned_strings,
-            lexer->interned_string_size
+
+/* ---------------------------- LEXER HELPERS -------------------------------- */
+typedef struct {
+    u32*   intern_string_lookup;
+    u8*    interned_strings;
+    size_t interned_string_size;
+} Interner;
+
+static Interner interner_make(void) {
+    return (Interner) {
+        .intern_string_lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
+        .interned_strings     = (u8*) malloc(1024),
+        .interned_string_size = sizeof(Str),  // Skip the first few bytes so that 0 from the lookup table means "not found".
     };
 }
 
-
-static IdentId intern_string(Lexer* lexer, Str string) {
+static IdentId intern_string(Interner* interner, Str string) {
     u64 index  = str_hash(string) & (1024-1);
-    u32 offset = lexer->intern_string_lookup[index];
+    u32 offset = interner->intern_string_lookup[index];
 
     do {
         // If the offset is 0, we have not found a match,
         // which means that the string is not interned yet.
         if (offset == 0) {
-            offset = lexer->interned_string_size;
+            offset = interner->interned_string_size;
 
             // Copy over the data and a null pointer at the end.
-            memcpy(lexer->interned_strings + lexer->interned_string_size, string.data, string.size);
-            memset(lexer->interned_strings + lexer->interned_string_size + string.size, '\0', 1);
+            memcpy(interner->interned_strings + interner->interned_string_size, string.data, string.size);
+            memset(interner->interned_strings + interner->interned_string_size + string.size, '\0', 1);
 
-            lexer->interned_string_size += string.size + 1;
-            lexer->intern_string_lookup[index] = offset;
+            interner->interned_string_size += string.size + 1;
+            interner->intern_string_lookup[index] = offset;
             return offset;
         }
 
-        const char* candidate = (const char*) (lexer->interned_strings + offset);
+        const char* candidate = (const char*) (interner->interned_strings + offset);
         if (strncmp(string.data, candidate, string.size) == 0) {
             // We found a match! Returned the cached offset.
             return offset;
         } else {
             // Go to the next entry in the lookup table.
             index = (index + 1) & (1024-1);
-            offset = lexer->intern_string_lookup[index];
+            offset = interner->intern_string_lookup[index];
         }
     } while (1);
 }
@@ -93,7 +72,42 @@ static inline int is_identifier_continue(char c) {
     return is_identifier_start(c) || is_digit(c);
 }
 
-static inline Str parse_identifier(const char* source) {
+
+/* ---------------------------- LEXER IMPL -------------------------------- */
+typedef struct {
+    Str source;
+
+    size_t   count;
+    Token*   tokens;
+    IdentId* identifiers;
+    size_t*  indices;
+
+    Interner interner;
+} Lexer;
+
+static void lexer_free(Lexer* lexer) {
+    free(lexer->tokens);
+    free(lexer->identifiers);
+    free(lexer->indices);
+    free(lexer->interner.intern_string_lookup);
+    free(lexer->interner.interned_strings);
+}
+
+static TokenArray lexer_to_token_array(Lexer* lexer, Str name) {
+    free(lexer->interner.intern_string_lookup);
+    return (TokenArray) {
+            name,
+            lexer->source,
+            lexer->tokens,
+            lexer->identifiers,
+            lexer->indices,
+            lexer->count,
+            lexer->interner.interned_strings,
+            lexer->interner.interned_string_size
+    };
+}
+
+static Str parse_identifier(const char* source) {
     const char* start = source;
     do {
         ++source;
@@ -103,7 +117,7 @@ static inline Str parse_identifier(const char* source) {
     return (Str) { (size_t)(end-start), start };
 }
 
-static inline Str parse_number(const char* source, Token* token) {
+static Str parse_number(const char* source, Token* token) {
     const char* start = source;
     do {
         ++source;
@@ -123,7 +137,7 @@ static inline Str parse_number(const char* source, Token* token) {
     return (Str) { (size_t)(end-start), start };
 }
 
-static inline Str parse_string(const char* source) {
+static Str parse_string(const char* source) {
     // Skip the first quote.
     const char* start = source + 1;
     do {
@@ -156,11 +170,11 @@ static inline int add_double_token(Lexer* lexer, const char* current, Token toke
 }
 
 static inline int add_token_with_identifier(Lexer* lexer, const char* current, Token token, Str identifier) {
-    IdentId ident = intern_string(lexer, identifier);
+    IdentId ident = intern_string(&lexer->interner, identifier);
     lexer->indices[lexer->count] = current - lexer->source.data;
     lexer->identifiers[lexer->count] = ident;
     lexer->tokens[lexer->count++] = (Token) { token };
-    return identifier.size;
+    return (int) identifier.size;
 }
 
 static Token token_from_string(Str string) {
@@ -193,6 +207,7 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
         case Token_Close_Paren:       return ")";
         case Token_Open_Brace:        return "{";
         case Token_Close_Brace:       return "}";
+        case Token_Comma:             return ",";
         case Token_Colon_Equal:       return ":=";
         case Token_If:                return "if";
         case Token_Else:              return "else";
@@ -217,9 +232,7 @@ TokenArray lexer_lex(Str name, Str source) {
         .tokens = (Token*) malloc(1024 * sizeof(Token)),
         .identifiers = (IdentId*) malloc(1024 * sizeof(IdentId)),
         .indices = (size_t*) malloc(1024 * sizeof(size_t)),
-        .intern_string_lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
-        .interned_strings     = (u8*) malloc(1024),
-        .interned_string_size = sizeof(Str),  // Skip the first few bytes so that 0 from the lookup table means "not found".
+        .interner = interner_make()
     };
 
     const char* current = source.data;
@@ -297,7 +310,8 @@ TokenArray lexer_lex(Str name, Str source) {
                     lexer_free(&lexer);
                     return (TokenArray) { name, source, NULL, NULL, NULL, 0, NULL, 0 };
                 }
-                current += add_token_with_identifier(&lexer, current, Token_String, string) + 2;
+                // current + 1 to skip the first quote.
+                current += add_token_with_identifier(&lexer, current+1, Token_String, string) + 2;
             } break;
             default: {
                 if (is_digit(*current)) {

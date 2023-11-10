@@ -25,12 +25,18 @@ typedef enum {
     Instruction_JmpZero,
     Instruction_Print,
     Instruction_Exit,
+} InstructionType;
+
+typedef struct {
+    InstructionType type;
+    u64 arg1;
+    u64 arg2;
 } Instruction;
 
 typedef u32 Register;
 
 typedef struct {
-    u8*    instructions;
+    Instruction* instructions;
     size_t size;
 } Bytecode;
 

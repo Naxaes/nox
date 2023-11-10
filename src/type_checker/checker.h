@@ -16,12 +16,10 @@ typedef struct {
     size_t  count;
 } Block;
 
-
 typedef struct {
     Node*   nodes;
     Block*  blocks;
     Node*   start;
-    TypeId* types;
 } TypedAst;
 
 TypedAst type_check(UntypedAst ast);
