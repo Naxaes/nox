@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
+#include <assert.h>
 
 
 typedef struct {
@@ -223,6 +224,12 @@ TokenArray lexer_lex(Str name, Str source) {
                 else
                     current += add_single_token(&lexer, current, Token_Greater);
             } break;
+            case ':': {
+                if (*(current+1) == '=')
+                    current += add_double_token(&lexer, current, Token_Colon_Equal);
+                else
+                    assert(0 && "Not implemented");
+            } break;
             case '=': {
                 if (*(current+1) == '=')
                     current += add_double_token(&lexer, current, Token_Equal_Equal);
@@ -240,6 +247,12 @@ TokenArray lexer_lex(Str name, Str source) {
                     current += add_double_token(&lexer, current, Token_Less_Equal);
                 else
                     current += add_single_token(&lexer, current, Token_Less);
+            } break;
+            case '{': {
+                current += add_single_token(&lexer, current, Token_Open_Brace);
+            } break;
+            case '}': {
+                current += add_single_token(&lexer, current, Token_Close_Brace);
             } break;
             default: {
                 if (is_digit(*current)) {

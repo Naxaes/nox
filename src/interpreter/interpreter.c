@@ -110,9 +110,24 @@ i64 interpret(Bytecode code) {
                 Register source = interpreter.instructions[interpreter.ip++];
                 interpreter.registers[dest] = interpreter.registers[source];
             } break;
+            case Instruction_JmpZero: {
+                Register register_index = interpreter.instructions[interpreter.ip++];
+                u64 value = interpreter.registers[register_index];
+                if (value == 0) {
+                    interpreter.ip = interpreter.instructions[interpreter.ip];
+                } else {
+                    interpreter.ip++;
+                }
+            } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];
                 return value;
+            } break;
+            default: {
+                fprintf(stderr, "[WARN] (Interpreter): Invalid instruction\n");
+                free(interpreter.stack);
+                free(interpreter.registers);
+                return 1;
             } break;
         }
     }

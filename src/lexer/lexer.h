@@ -32,6 +32,7 @@ typedef enum {
 
     Token_Exclamation,
     Token_Equal,
+    Token_Colon_Equal,
 
     Token_If,
     Token_Keywords_Start = Token_If,

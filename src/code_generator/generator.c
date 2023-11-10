@@ -12,7 +12,7 @@ typedef struct {
 } Generator;
 
 Register generate_for_expression(Generator* generator, TypedAst ast, Node* node);
-
+void generate_for_statement(Generator* generator, TypedAst ast, Node* node);
 
 
 Register mov_imm64(Generator* generator, u8 dest, u64 immediate) {
@@ -118,11 +118,44 @@ Register generate_for_expression(Generator* generator, TypedAst ast, Node* node)
     }
 }
 
+Register generate_for_assign(Generator* generator, TypedAst ast, NodeAssign assign) {
+    Register src = generate_for_expression(generator, ast, assign.expression);
+    generator->current_register--;  // Consume the expression register
+
+    Block* current = ast.blocks;
+    for (size_t i = 0; i < current->count; ++i) {
+        Local* local = current->locals + i;
+        assert(local->decl.kind == NodeKind_VarDecl && "Invalid node kind");
+        if (local->decl.var_decl.name == assign.name) {
+            generator->instructions[generator->count++] = Instruction_Store;
+            generator->instructions[generator->count++] = i;
+            generator->instructions[generator->count++] = src;
+            return generator->current_register++;
+        }
+    }
+    fprintf(stderr, "Unknown identifier: '%s'\n", assign.name);
+    return 0;
+}
+
 void generate_for_var_decl(Generator* generator, TypedAst ast, NodeVarDecl var_decl) {
     Register dest = generator->current_register++;
     Register src  = generate_for_expression(generator, ast, var_decl.expression);
     generator->current_register--;  // Consume the expression register
     store(generator, dest, src);
+}
+
+void generate_for_if_stmt(Generator* generator, TypedAst ast, NodeIf if_stmt) {
+    Register condition = generate_for_expression(generator, ast, if_stmt.condition);
+    generator->current_register--;  // Consume the expression register
+
+    generator->instructions[generator->count++] = Instruction_JmpZero;
+    generator->instructions[generator->count++] = condition;
+    u8* jump_to_else = generator->instructions + generator->count;
+    generator->instructions[generator->count++] = Instruction_Invalid;
+
+    generate_for_statement(generator, ast, (Node*) if_stmt.then_block);
+
+    *jump_to_else = (u8) generator->count;
 }
 
 void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
@@ -134,9 +167,16 @@ void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
             generate_for_expression(generator, ast, node);
             generator->current_register--;  // Consume the expression register
         } break;
+        case NodeKind_Assign:
+            generate_for_assign(generator, ast, node->assign);
+            break;
         case NodeKind_VarDecl:
             generate_for_var_decl(generator, ast, node->var_decl);
             break;
+        case NodeKind_If: {
+            generate_for_if_stmt(generator, ast, node->if_stmt);
+            break;
+        }
         case NodeKind_Block: {
             NodeBlock block = node->block;
             while ((node = *block.nodes++) != NULL) {

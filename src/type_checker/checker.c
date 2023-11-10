@@ -120,12 +120,56 @@ TypeId type_check_var_decl(Checker* checker, NodeVarDecl var_decl) {
     return -1;
 }
 
+
+TypeId type_check_assignment(Checker* checker, NodeAssign assign) {
+    TypeId expr = type_check_expression(checker, assign.expression);
+    if (expr == 0)
+        return 0;
+
+    Block* current = checker->current;
+    for (size_t i = 0; i < current->count; ++i) {
+        Local* local = current->locals + i;
+        assert(local->decl.kind == NodeKind_VarDecl && "Invalid node kind");
+        if (local->decl.var_decl.name == assign.name) {
+            return local->type;
+        }
+    }
+    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->ast.tokens.name), assign.name);
+    int start = (int) checker->ast.tokens.indices[assign.base.start];
+    int end   = (int) checker->ast.tokens.indices[assign.base.end];
+    const char* repr = lexer_repr_of(checker->ast.tokens, assign.base.end);
+
+    point_to_error(checker->ast.tokens.source, start, end + strlen(repr));
+    return 0;
+}
+
 TypeId type_check_block(Checker* checker, NodeBlock block) {
     Node* node = NULL;
     while ((node = *block.nodes++) != NULL) {
         if (type_check_statement(checker, node) == 0)
             return 0;
     }
+    return -1;
+}
+
+TypeId type_check_if_stmt(Checker* checker, NodeIf if_stmt) {
+    TypeId condition = type_check_expression(checker, if_stmt.condition);
+    if (condition == 0)
+        return 0;
+
+    if (condition != Literal_Boolean) {
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Condition of 'if' statement must be a boolean, got '%s'\n", STR_ARG(checker->ast.tokens.name), type_repr_of(condition));
+        int start = (int) checker->ast.tokens.indices[if_stmt.condition->base.start];
+        int end   = (int) checker->ast.tokens.indices[if_stmt.condition->base.end];
+        const char* repr = lexer_repr_of(checker->ast.tokens, if_stmt.condition->base.end);
+
+        point_to_error(checker->ast.tokens.source, start, end + strlen(repr));
+        return 0;
+    }
+
+    if (type_check_block(checker, *if_stmt.then_block) == 0)
+        return 0;
+
     return -1;
 }
 
@@ -150,8 +194,12 @@ TypeId type_check_statement(Checker* checker, Node* node) {
         case NodeKind_Identifier:
         case NodeKind_Binary:
             return type_check_expression(checker, node);
+        case NodeKind_Assign:
+            return type_check_assignment(checker, node->assign);
         case NodeKind_VarDecl:
             return type_check_var_decl(checker, node->var_decl);
+        case NodeKind_If:
+            return type_check_if_stmt(checker, node->if_stmt);
         case NodeKind_Block:
             return type_check_block(checker, node->block);
         default:
