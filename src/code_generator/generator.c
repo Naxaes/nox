@@ -176,6 +176,45 @@ void generate_for_if_stmt(Generator* generator, TypedAst ast, NodeIf if_stmt) {
     } else {
         *jump_to_else = (u8) generator->count;
     }
+}
+
+void generate_for_while_stmt(Generator* generator, TypedAst ast, NodeWhile while_stmt) {
+    /*
+     * start:
+     * if condition == 0 goto end
+     *    statements
+     *    jmp start
+     * end
+     */
+    u8 jump_to_start = generator->count;
+
+    Register condition = generate_for_expression(generator, ast, while_stmt.condition);
+    generator->current_register--;  // Consume the expression register
+
+    generator->instructions[generator->count++] = Instruction_JmpZero;
+    generator->instructions[generator->count++] = condition;
+    u8* jump_to_else = generator->instructions + generator->count;
+    generator->instructions[generator->count++] = Instruction_Invalid;
+
+    generate_for_statement(generator, ast, (Node*) while_stmt.then_block);
+
+    generator->instructions[generator->count++] = Instruction_Jmp;
+    generator->instructions[generator->count++] = jump_to_start;
+
+    if (while_stmt.else_block != NULL) {
+        assert(0 && "not implemented");
+
+        generator->instructions[generator->count++] = Instruction_Jmp;
+        u8* jump_to_end = generator->instructions + generator->count;
+        generator->instructions[generator->count++] = Instruction_Invalid;
+
+        *jump_to_else = (u8) generator->count;
+
+        generate_for_statement(generator, ast, (Node*) while_stmt.else_block);
+        *jump_to_end = (u8) generator->count;
+    } else {
+        *jump_to_else = (u8) generator->count;
+    }
 
 }
 
@@ -196,6 +235,10 @@ void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
             break;
         case NodeKind_If: {
             generate_for_if_stmt(generator, ast, node->if_stmt);
+            break;
+        }
+        case NodeKind_While: {
+            generate_for_while_stmt(generator, ast, node->while_stmt);
             break;
         }
         case NodeKind_Block: {

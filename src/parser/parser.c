@@ -410,6 +410,31 @@ static Node* if_stmt(Parser* parser) {
     return add_node(parser, (Node) { .if_stmt = if_stmt });
 }
 
+static Node* while_stmt(Parser* parser) {
+    assert(current(parser) == Token_While && "Expected 'while' token");
+    TokenId start = parser->current_token_id;
+    advance(parser);
+
+    Node* condition = expression(parser);
+    if (condition == NULL) {
+        return NULL;
+    }
+
+    Node* then_block = block(parser);
+    if (then_block == NULL) {
+        return NULL;
+    }
+
+    Node* else_block = NULL;
+    if (current(parser) == Token_Else) {
+        advance(parser);
+        else_block = block(parser);
+    }
+
+    NodeWhile while_stmt = { { NodeKind_While, start, then_block->base.end }, .condition = condition, .then_block = (NodeBlock*) then_block, .else_block = (NodeBlock*) else_block };
+    return add_node(parser, (Node) { .while_stmt = while_stmt });
+}
+
 
 static Node* statement(Parser* parser) {
     Token token = current(parser);
@@ -455,6 +480,9 @@ static Node* statement(Parser* parser) {
         } break;
         case Token_If: {
             return if_stmt(parser);
+        } break;
+        case Token_While: {
+            return while_stmt(parser);
         } break;
         case Token_Eof: {
             return NULL;

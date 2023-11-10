@@ -176,6 +176,30 @@ TypeId type_check_if_stmt(Checker* checker, NodeIf if_stmt) {
     return -1;
 }
 
+TypeId type_check_while_stmt(Checker* checker, NodeWhile while_stmt) {
+    TypeId condition = type_check_expression(checker, while_stmt.condition);
+    if (condition == 0)
+        return 0;
+
+    if (condition != Literal_Boolean) {
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Condition of 'if' statement must be a boolean, got '%s'\n", STR_ARG(checker->ast.tokens.name), type_repr_of(condition));
+        int start = (int) checker->ast.tokens.indices[while_stmt.condition->base.start];
+        int end   = (int) checker->ast.tokens.indices[while_stmt.condition->base.end];
+        const char* repr = lexer_repr_of(checker->ast.tokens, while_stmt.condition->base.end);
+
+        point_to_error(checker->ast.tokens.source, start, end + strlen(repr));
+        return 0;
+    }
+
+    if (type_check_block(checker, *while_stmt.then_block) == 0)
+        return 0;
+
+    if (while_stmt.else_block != NULL && type_check_block(checker, *while_stmt.then_block) == 0)
+        return 0;
+
+    return -1;
+}
+
 TypeId type_check_expression(Checker* checker, Node* node) {
     assert(node_is_expression(node) && "Not an expression");
     switch (node->kind) {
@@ -203,6 +227,8 @@ TypeId type_check_statement(Checker* checker, Node* node) {
             return type_check_var_decl(checker, node->var_decl);
         case NodeKind_If:
             return type_check_if_stmt(checker, node->if_stmt);
+        case NodeKind_While:
+            return type_check_while_stmt(checker, node->while_stmt);
         case NodeKind_Block:
             return type_check_block(checker, node->block);
         default:
