@@ -189,6 +189,8 @@ const char* lexer_repr_of(TokenArray tokens, TokenId id) {
         case Token_Greater_Equal:     return ">=";
         case Token_Greater:           return ">";
         case Token_Exclamation:       return "!";
+        case Token_Open_Paren:        return "(";
+        case Token_Close_Paren:       return ")";
         case Token_Open_Brace:        return "{";
         case Token_Close_Brace:       return "}";
         case Token_Colon_Equal:       return ":=";
@@ -274,11 +276,20 @@ TokenArray lexer_lex(Str name, Str source) {
                 else
                     current += add_single_token(&lexer, current, Token_Less);
             } break;
+            case '(': {
+                current += add_single_token(&lexer, current, Token_Open_Paren);
+            } break;
+            case ')': {
+                current += add_single_token(&lexer, current, Token_Close_Paren);
+            } break;
             case '{': {
                 current += add_single_token(&lexer, current, Token_Open_Brace);
             } break;
             case '}': {
                 current += add_single_token(&lexer, current, Token_Close_Brace);
+            } break;
+            case ',': {
+                current += add_single_token(&lexer, current, Token_Comma);
             } break;
             case '"': {
                 Str string = parse_string(current);

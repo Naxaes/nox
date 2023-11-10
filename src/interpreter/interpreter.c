@@ -122,6 +122,10 @@ i64 interpret(Bytecode code) {
                     interpreter.ip++;
                 }
             } break;
+            case Instruction_Print: {
+                Register register_index = interpreter.instructions[interpreter.ip++];
+                printf("%s\n", (const char*) interpreter.registers[register_index]);
+            } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];
                 return value;

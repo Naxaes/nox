@@ -105,6 +105,15 @@ Register generate_for_binary(Generator* generator, TypedAst ast, NodeBinary bina
     return bin_op(generator, inst, dest, source);
 }
 
+Register generate_for_call(Generator* generator, TypedAst ast, NodeCall call) {
+    assert(strcmp(call.name, "print") == 0 && "Only support print for now");
+
+    Register src = generate_for_expression(generator, ast, call.args[0]);
+    generator->instructions[generator->count++] = Instruction_Print;
+    generator->instructions[generator->count++] = src;
+    return 0;
+}
+
 Register generate_for_expression(Generator* generator, TypedAst ast, Node* node) {
     assert(node_is_expression(node) && "Invalid node kind");
     switch (node->kind) {
@@ -114,6 +123,8 @@ Register generate_for_expression(Generator* generator, TypedAst ast, Node* node)
             return generate_for_identifier(generator, ast, node->identifier);
         case NodeKind_Binary:
             return generate_for_binary(generator, ast, node->binary);
+        case NodeKind_Call:
+            return generate_for_call(generator, ast, node->call);
         default:
             assert(0 && "not implemented");
             return 0;
@@ -225,7 +236,8 @@ void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
     switch (node->kind) {
         case NodeKind_Literal:
         case NodeKind_Identifier:
-        case NodeKind_Binary: {
+        case NodeKind_Binary:
+        case NodeKind_Call: {
             generate_for_expression(generator, ast, node);
             generator->current_register--;  // Consume the expression register
         } break;

@@ -1,0 +1,3 @@
+print("Hello sailor!")
+a := "Hello world!"
+print(a)
