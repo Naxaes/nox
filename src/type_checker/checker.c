@@ -82,8 +82,8 @@ static Local* find_local(Checker* checker, const char* name) {
 
 static void report_undeclared_identifier(Checker* checker, const char* name, Node* node) {
     fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->ast.tokens.name), name);
-    int start = (int) checker->ast.tokens.indices[node->base.start];
-    int end   = (int) checker->ast.tokens.indices[node->base.end];
+    int start = (int) checker->ast.tokens.source_offsets[node->base.start];
+    int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
 
     point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
@@ -91,8 +91,8 @@ static void report_undeclared_identifier(Checker* checker, const char* name, Nod
 
 static void report_binary_op_mismatch(Checker* checker, NodeBinary binary, TypeId left, TypeId right) {
     fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary), type_repr_of(left), type_repr_of(right));
-    int start = (int) checker->ast.tokens.indices[binary.base.start];
-    int end   = (int) checker->ast.tokens.indices[binary.base.end];
+    int start = (int) checker->ast.tokens.source_offsets[binary.base.start];
+    int end   = (int) checker->ast.tokens.source_offsets[binary.base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, binary.base.end);
 
     point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
@@ -100,8 +100,8 @@ static void report_binary_op_mismatch(Checker* checker, NodeBinary binary, TypeI
 
 static void report_type_expectation(Checker* checker, const char* prefix, Node* node, TypeId expected, TypeId got) {
     fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->ast.tokens.name), prefix, type_repr_of(expected), type_repr_of(got));
-    int start = (int) checker->ast.tokens.indices[node->base.start];
-    int end   = (int) checker->ast.tokens.indices[node->base.end];
+    int start = (int) checker->ast.tokens.source_offsets[node->base.start];
+    int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
 
     point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));

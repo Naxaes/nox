@@ -25,9 +25,9 @@ typedef enum {
 } NodeKind;
 
 typedef struct {
-    NodeKind kind;
-    TokenId  start;
-    TokenId  end;
+    NodeKind   kind;
+    TokenIndex start;
+    TokenIndex end;
 } NodeBase;
 
 typedef struct {
@@ -145,6 +145,7 @@ union Node {
 int node_is_expression(const Node* node);
 // NOTE(ted): All nodes are statements except for an invalid node.
 int node_is_statement(const Node* node);
+
 
 
 typedef struct {

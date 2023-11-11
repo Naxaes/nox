@@ -48,7 +48,7 @@ static void print_indentation_(TreeWriter* writer, const int is_last) {
 
 
 static inline Location location_of_node(UntypedAst* ast, Node* node) {
-    return location_of(ast->tokens.source.data, ast->tokens.indices[node->base.start]);
+    return location_of(ast->tokens.source.data, ast->tokens.source_offsets[node->base.start]);
 }
 
 static inline NodeId id_of(UntypedAst* ast, Node* node) {

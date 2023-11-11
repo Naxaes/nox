@@ -144,7 +144,7 @@ int transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
                 fprintf(file, "}\n");
             } break;
             default: {
-                fprintf(stderr, "[ERROR] (Transpiler): Invalid instruction '%d'\n", instruction);
+                fprintf(stderr, "[ERROR] (Transpiler): Invalid instruction '%d'\n", instruction.type);
                 return -1;
             } break;
         }

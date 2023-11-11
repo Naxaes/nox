@@ -87,7 +87,7 @@ int binary_op_is_comparison(NodeBinary binary) {
 /* ---------------------------- PARSER IMPL -------------------------------- */
 typedef struct {
     TokenArray tokens;
-    TokenId    current_token_id;
+    TokenIndex token_index;
     Node*      nodes;
     NodeId     node_count;
     Node**     views;
@@ -115,21 +115,21 @@ UntypedAst parser_to_ast(Parser* parser, Node* start) {
 
 /* ---------------------------- PARSER HELPERS -------------------------------- */
 static inline Token current(Parser* parser) {
-    return parser->tokens.tokens[parser->current_token_id];
+    return parser->tokens.tokens[parser->token_index];
 }
 
 static inline Token peek(Parser* parser) {
-    if (parser->current_token_id + 1 >= parser->tokens.size)
+    if (parser->token_index + 1 >= parser->tokens.size)
         return Token_Eof;
-    return parser->tokens.tokens[parser->current_token_id + 1];
+    return parser->tokens.tokens[parser->token_index + 1];
 }
 
-static inline TokenId advance(Parser* parser) {
-    return parser->current_token_id++;
+static inline TokenIndex advance(Parser* parser) {
+    return parser->token_index++;
 }
 
 static inline const char* repr_of_current(Parser* parser) {
-    return lexer_repr_of(parser->tokens, parser->current_token_id);
+    return lexer_repr_of(parser->tokens, parser->token_index);
 }
 
 static inline Node* add_node(Parser* parser, Node node) {
@@ -262,7 +262,7 @@ static Node* precedence(Parser* parser, Precedence precedence) {
 
 static Node* number(Parser* parser) {
     assert(current(parser) == Token_Number && "Expected number token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     i64 value = strtoll(repr, NULL, 10);
@@ -274,7 +274,7 @@ static Node* number(Parser* parser) {
 
 static Node* real(Parser* parser) {
     assert(current(parser) == Token_Real && "Expected real token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     f64 value = strtod(repr, NULL);
@@ -286,7 +286,7 @@ static Node* real(Parser* parser) {
 
 static Node* string(Parser* parser) {
     assert(current(parser) == Token_String && "Expected string token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     advance(parser);
@@ -297,7 +297,7 @@ static Node* string(Parser* parser) {
 
 static Node* identifier(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     advance(parser);
@@ -363,7 +363,7 @@ static Node* binary(Parser* parser, Node* left) {
 static Node* call(Parser* parser, Node* left) {
     assert(current(parser) == Token_Open_Paren && "Expected '(' token");
     assert(left->kind == NodeKind_Identifier && "Expected identifier node");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
     advance(parser);
 
     NodeId snapshot = stack_snapshot(parser);
@@ -379,8 +379,8 @@ static Node* call(Parser* parser, Node* left) {
                 break;
         }
         if (current(parser) != Token_Close_Paren) {
-            fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
-            int begin = (int) parser->tokens.indices[parser->current_token_id];
+            fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
+            int begin = (int) parser->tokens.source_offsets[parser->token_index];
             point_to_error(parser->tokens.source, begin, (int)start+1);
             return NULL;
         }
@@ -410,8 +410,8 @@ static Node* group(Parser* parser) {
 
     token = current(parser);
     if (token != Token_Close_Paren) {
-        fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
-        int start = (int) parser->tokens.indices[parser->current_token_id];
+        fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
+        int start = (int) parser->tokens.source_offsets[parser->token_index];
         point_to_error(parser->tokens.source, start, start+1);
         return NULL;
     }
@@ -423,7 +423,7 @@ static Node* group(Parser* parser) {
 
 static Node* assignment(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     advance(parser);
@@ -442,7 +442,7 @@ static Node* assignment(Parser* parser) {
 
 static Node* var_decl(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     advance(parser);
@@ -463,7 +463,7 @@ static Node* var_decl(Parser* parser) {
 
 static Node* block(Parser* parser) {
     assert(current(parser) == Token_Open_Brace && "Expected '{' token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
     advance(parser);
 
     size_t snapshot = stack_snapshot(parser);
@@ -488,7 +488,7 @@ static Node* block(Parser* parser) {
 
 static NodeFunParam* fun_param(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
 
     const char* repr = repr_of_current(parser);
     advance(parser);
@@ -521,7 +521,7 @@ static NodeFunParam** fun_params(Parser* parser) {
 
 static Node* fun_decl(Parser* parser) {
     assert(current(parser) == Token_Fun && "Expected 'fun' token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
     advance(parser);
 
     if (current(parser) != Token_Identifier) {
@@ -549,7 +549,7 @@ static Node* fun_decl(Parser* parser) {
 
 static Node* if_stmt(Parser* parser) {
     assert(current(parser) == Token_If && "Expected 'if' token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
     advance(parser);
 
     Node* condition = expression(parser);
@@ -574,7 +574,7 @@ static Node* if_stmt(Parser* parser) {
 
 static Node* while_stmt(Parser* parser) {
     assert(current(parser) == Token_While && "Expected 'while' token");
-    TokenId start = parser->current_token_id;
+    TokenIndex start = parser->token_index;
     advance(parser);
 
     Node* condition = expression(parser);
@@ -622,8 +622,8 @@ static Node* statement(Parser* parser) {
         case Token_Comma:
         case Token_Else:
         case Token_Invalid: {
-            fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->current_token_id));
-            int start = (int) parser->tokens.indices[parser->current_token_id];
+            fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
+            int start = (int) parser->tokens.source_offsets[parser->token_index];
             point_to_error(parser->tokens.source, start, start+1);
             return NULL;
         } break;
@@ -664,7 +664,7 @@ static Node* statement(Parser* parser) {
 UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
-        .current_token_id = 0,
+        .token_index = 0,
         .nodes = (Node*) malloc(1024),
         .node_count = 0,
         .views = (Node**) malloc(1024),
@@ -678,9 +678,9 @@ UntypedAst parse(TokenArray tokens) {
     reserve_node(&parser);
     Node* node = 0;
 
-    TokenId first = parser.current_token_id;
+    TokenIndex first = parser.token_index;
 
-    while (parser.current_token_id < tokens.size) {
+    while (parser.token_index < tokens.size) {
         Token token = current(&parser);
 
         if (token != Token_Eof) {
@@ -696,7 +696,7 @@ UntypedAst parse(TokenArray tokens) {
             }
             parser.views[parser.view_count++] = NULL;
 
-            TokenId stop = parser.current_token_id;
+            TokenIndex stop = parser.token_index;
             NodeBlock block = { { NodeKind_Block, first, stop }, .nodes = statements };
 
             node = add_node(&parser, (Node) { .block = block });
