@@ -17,122 +17,122 @@ int transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
         Instruction instruction = code.instructions[i];
         switch (instruction.type) {
             case Instruction_MovImm64: {
-                Register src = instruction.arg1;
-                u64 value = instruction.arg2;
+                u8  dst = instruction.imm.dst;
+                u64 val = instruction.imm.val;
                 
-                fprintf(file, "\treg[%d] = %llu;\n", src, value);
+                fprintf(file, "\treg[%d] = %llu;\n", dst, val);
             } break;
             case Instruction_Mov: {
                 // int n = m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
             } break;
             case Instruction_Add: {
                 // int n = n + m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] + reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Sub: {
                 // int n = n - m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] - reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Mul: {
                 // int n = n * m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] * reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Div: {
                 // int n = n / m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] / reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Mod: {
                 // int n = n % m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] %% reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Lt: {
                 // int n = n < m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] < reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Le: {
                 // int n = n <= m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] <= reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Eq: {
                 // int n = n == m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] == reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Ne: {
                 // int n = n != m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] != reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Ge: {
                 // int n = n >= m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] >= reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Gt: {
                 // int n = n > m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] > reg[%d];\n", dst, dst, src);
             } break;
             case Instruction_Store: {
                 // int n = m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
             } break;
             case Instruction_Load: {
                 // int n = m;
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d];\n", dst, src);
             } break;
             case Instruction_Jmp: {
                 // goto label;
-                u8 label = instruction.arg1;
+                u8 label = instruction.jmp.label;
 
                 fprintf(file, "\tgoto label_%d;\n", label);
                 labels[label_count++] = label;
             } break;
             case Instruction_JmpZero: {
                 // if (n == 0) goto label;
-                u8 reg   = instruction.arg1;
-                u8 label = instruction.arg2;
+                u8 label  = instruction.jmp.label;
+                u8 src = instruction.jmp.src;
 
-                fprintf(file, "\tif (reg[%d] == 0) goto label_%d;\n", reg, label);
+                fprintf(file, "\tif (reg[%d] == 0) goto label_%d;\n", src, label);
                 labels[label_count++] = label;
             } break;
             case Instruction_Exit: {

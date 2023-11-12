@@ -164,10 +164,9 @@ static inline void stack_push(Parser* parser, Node* node) {
 }
 
 static inline Node** stack_restore(Parser* parser, NodeId snapshot) {
-    /*if (snapshot == parser->stack_count) {
-        static Node** empty = NULL;
-        return empty;
-    }*/
+    if (snapshot == parser->stack_count) {
+        return NULL;
+    }
 
     Node** nodes = parser->views + parser->view_count;
     for (size_t i = snapshot; i < parser->stack_count; ++i) {
@@ -492,8 +491,12 @@ static Node* block(Parser* parser) {
     }
     Node** statements = stack_restore(parser, snapshot);
 
-    NodeBlock block = { { NodeKind_Block, start, node->base.end }, .nodes = statements };
-    return add_node(parser, (Node) { .block = block });
+    NodeBlock block = {
+        node_base_block(start, node->base.end),
+        .id = 0,
+        .nodes = statements
+    };
+    return add_node(parser, node_block(block));
 }
 
 static NodeFunParam* fun_param(Parser* parser) {
@@ -503,8 +506,12 @@ static NodeFunParam* fun_param(Parser* parser) {
     const char* repr = repr_of_current(parser);
     advance(parser);
 
-    NodeFunParam fun_param = { { NodeKind_FunParam, start, start }, .name = repr };
-    return (NodeFunParam*) add_node(parser, (Node) { .fun_param = fun_param });
+    NodeFunParam fun_param = {
+        node_base_fun_param(start, start),
+        .name = repr,
+        .type = LiteralType_Integer,
+    };
+    return (NodeFunParam*) add_node(parser, node_fun_param(fun_param));
 }
 
 static NodeFunParam** fun_params(Parser* parser) {
@@ -529,7 +536,7 @@ static NodeFunParam** fun_params(Parser* parser) {
     return (NodeFunParam**) stack_restore(parser, snapshot);
 }
 
-static Node* fun_decl(Parser* parser) {
+static NodeFunDecl* fun_decl(Parser* parser) {
     assert(current(parser) == Token_Fun && "Expected 'fun' token");
     TokenIndex start = parser->token_index;
     advance(parser);
@@ -553,8 +560,13 @@ static Node* fun_decl(Parser* parser) {
     if (body == NULL)
         return NULL;
 
-    NodeFunDecl fun_decl = { { NodeKind_FunDecl, start, body->base.end }, .name = repr, .params = params, .block = (NodeBlock*) body };
-    return add_node(parser, (Node) { .fun_decl = fun_decl });
+    NodeFunDecl fun_decl = {
+        node_base_fun_decl(start, body->base.end),
+        .name = repr,
+        .params = params,
+        .block = (NodeBlock*) body
+    };
+    return (NodeFunDecl*) add_node(parser, node_fun_decl(fun_decl));
 }
 
 static Node* if_stmt(Parser* parser) {
@@ -578,8 +590,13 @@ static Node* if_stmt(Parser* parser) {
         else_block = block(parser);
     }
 
-    NodeIf if_stmt = { { NodeKind_If, start, then_block->base.end }, .condition = condition, .then_block = (NodeBlock*) then_block, .else_block = (NodeBlock*) else_block };
-    return add_node(parser, (Node) { .if_stmt = if_stmt });
+    NodeIf if_stmt = {
+        node_base_if_stmt(start, then_block->base.end),
+        .condition = condition,
+        .then_block = (NodeBlock*) then_block,
+        .else_block = (NodeBlock*) else_block
+    };
+    return add_node(parser, node_if_stmt(if_stmt));
 }
 
 
@@ -667,7 +684,7 @@ static Node* statement(Parser* parser) {
             return while_stmt(parser);
         } break;
         case Token_Fun: {
-            return fun_decl(parser);
+            return (Node*) fun_decl(parser);
         } break;
         case Token_Eof: {
             return NULL;
@@ -680,11 +697,11 @@ UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
         .token_index = 0,
-        .nodes = (Node*) malloc(1024),
+        .nodes = (Node*) malloc(1024 * sizeof(Node)),
         .node_count = 0,
-        .views = (Node**) malloc(1024),
+        .views = (Node**) malloc(1024 * sizeof(Node*)),
         .view_count = 0,
-        .stack = (Node**) malloc(1024),
+        .stack = (Node**) malloc(1024 * sizeof(Node*)),
         .stack_count = 0,
     };
 

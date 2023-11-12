@@ -20,92 +20,92 @@ i64 interpret(Bytecode code) {
         Instruction instruction = interpreter.instructions[interpreter.ip++];
         switch (instruction.type) {
             case Instruction_MovImm64: {
-                Register register_index = instruction.arg1;
-                u64 value = instruction.arg2;
-                interpreter.registers[register_index] = value;
+                u64 dst = instruction.imm.dst;
+                u64 val = instruction.imm.val;
+                interpreter.registers[dst] = val;
             } break;
             case Instruction_Mov: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[src];
             } break;
             case Instruction_Add: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] += interpreter.registers[src];
             } break;
             case Instruction_Sub: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] -= interpreter.registers[src];
             } break;
             case Instruction_Mul: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] *= interpreter.registers[src];
             } break;
             case Instruction_Div: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] /= interpreter.registers[src];
             } break;
             case Instruction_Mod: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] %= interpreter.registers[src];
             } break;
             case Instruction_Lt: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[dst] < interpreter.registers[src];
             } break;
             case Instruction_Le: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[dst] <= interpreter.registers[src];
             } break;
             case Instruction_Eq: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[dst] == interpreter.registers[src];
             } break;
             case Instruction_Ne: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[dst] != interpreter.registers[src];
             } break;
             case Instruction_Ge: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[dst] >= interpreter.registers[src];
             } break;
             case Instruction_Gt: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[dst] > interpreter.registers[src];
             } break;
             case Instruction_Store: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[src];
             } break;
             case Instruction_Load: {
-                Register dst = instruction.arg1;
-                Register src = instruction.arg2;
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
                 interpreter.registers[dst] = interpreter.registers[src];
             } break;
             case Instruction_Jmp: {
-                interpreter.ip = instruction.arg1;
+                interpreter.ip = instruction.jmp.label;
             } break;
             case Instruction_JmpZero: {
-                Register src = instruction.arg1;
+                Register src = instruction.jmp.src;
                 u64 value = interpreter.registers[src];
                 if (value == 0) {
-                    interpreter.ip = instruction.arg2;
+                    interpreter.ip = instruction.jmp.label;
                 }
             } break;
             case Instruction_Print: {
-                Register src = instruction.arg1;
+                Register src = instruction.call.label;
                 printf("%s\n", (const char*) interpreter.registers[src]);
             } break;
             case Instruction_Exit: {
