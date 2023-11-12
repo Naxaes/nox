@@ -1,6 +1,10 @@
 fun temp(a: str, b: str, c: str) {
     print(a)
+    x := "Hello"
+    print(x)
+    y := "World"
     print(c)
+    print(y)
     print(b)
 }
 temp("AAAA", "BBBB", "CCCC")

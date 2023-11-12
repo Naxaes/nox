@@ -38,8 +38,9 @@ static void checker_free(Checker* checker) {
 static TypedAst checker_to_ast(Checker* checker) {
     return (TypedAst) {
         checker->ast.nodes,
-        checker->blocks,
+        checker->ast.views,
         checker->ast.start,
+        checker->blocks,
     };
 }
 
@@ -246,7 +247,6 @@ static TypeId type_check_block(Checker* checker, NodeBlock* block, int new_block
         if (new_block)
             parent = push_block(checker);
 
-        block->id = checker->current - checker->blocks;
         Node* node = NULL;
         Node** nodes = block->nodes;
         while ((node = *(nodes++)) != NULL) {
@@ -384,12 +384,10 @@ TypedAst type_check(UntypedAst ast) {
         .current = NULL,
     };
 
-    push_block(&checker);
-
     TypeId type = type_check_statement(&checker, node);
     if (type == 0) {
         checker_free(&checker);
-        return (TypedAst) { NULL, NULL, NULL };
+        return (TypedAst) { NULL, NULL, NULL, NULL };
     }
 
     return checker_to_ast(&checker);

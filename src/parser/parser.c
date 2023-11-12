@@ -101,6 +101,9 @@ typedef struct {
     NodeId     view_count;
     Node**     stack;
     NodeId     stack_count;
+
+    NodeBlock* current_block;
+    NodeId     block_count;
 } Parser;
 
 void parser_free(Parser* parser) {
@@ -493,7 +496,8 @@ static Node* block(Parser* parser) {
 
     NodeBlock block = {
         node_base_block(start, node->base.end),
-        .id = 0,
+        .id = (i32) ++parser->block_count,
+        .parent = parser->current_block->id,
         .nodes = statements
     };
     return add_node(parser, node_block(block));
@@ -729,36 +733,38 @@ UntypedAst parse(TokenArray tokens) {
         .view_count = 0,
         .stack = (Node**) malloc(1024 * sizeof(Node*)),
         .stack_count = 0,
+        .current_block = NULL,
+        .block_count = 0,
     };
 
     // Reserve one slot so that any references to 0 are invalid,
     // as no nodes should be able to reference a start node.
-    reserve_node(&parser);
-    Node* node = 0;
-
     TokenIndex first = parser.token_index;
+    parser.current_block = (NodeBlock*) add_node(&parser, node_block((NodeBlock) {
+        node_base_block(0, 0),
+        .id = 0,
+        .parent = -1,
+        .nodes = NULL
+    }));
 
+
+    size_t snapshot = stack_snapshot(&parser);
     while (parser.token_index < tokens.size) {
         Token token = current(&parser);
 
         if (token != Token_Eof) {
-            node = statement(&parser);
+            Node* node = statement(&parser);
             if (node == NULL) {
                 goto error;
             }
            parser.stack[parser.stack_count++] = node;
         } else {
-            Node** statements = parser.views + parser.view_count;
-            for (size_t i = 0; i < parser.stack_count; ++i) {
-                parser.views[parser.view_count++] = parser.stack[i];
-            }
-            parser.views[parser.view_count++] = NULL;
+            Node** statements = stack_restore(&parser, snapshot);
 
             TokenIndex stop = parser.token_index;
-            NodeBlock block = { { NodeKind_Block, first, stop }, .nodes = statements };
-
-            node = add_node(&parser, (Node) { .block = block });
-            return parser_to_ast(&parser, node);
+            parser.current_block->base = node_base_block(first, stop);
+            parser.current_block->nodes = statements;
+            return parser_to_ast(&parser, (Node*)parser.current_block);
         }
     }
 
