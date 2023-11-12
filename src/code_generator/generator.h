@@ -44,6 +44,8 @@ typedef enum {
     Instruction_Jmp,
     Instruction_JmpZero,
     Instruction_Print,
+    Instruction_Call,
+    Instruction_Ret,
     Instruction_Exit,
 } InstructionType;
 

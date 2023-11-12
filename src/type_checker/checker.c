@@ -64,7 +64,7 @@ static Local* find_local(Checker* checker, const char* name) {
     while (current != NULL) {
         for (size_t i = 0; i < current->count; ++i) {
             Local* local = current->locals + i;
-            assert(local->decl->kind == NodeKind_VarDecl && "Invalid node kind");
+            assert((local->decl->kind == NodeKind_VarDecl || local->decl->kind == NodeKind_FunDecl || local->decl->kind == NodeKind_FunParam) && "Invalid node kind");
             if (local->decl->var_decl.name == name) {
                 return local;
             }
@@ -142,8 +142,75 @@ static TypeId type_check_binary(Checker* checker, NodeBinary* binary) {
 }
 
 static TypeId type_check_call(Checker* checker, NodeCall* call) {
-    (void)checker;
-    (void)call;
+    if (strcmp(call->name, "print") == 0)
+        return -1;
+
+    Local* local = find_local(checker, call->name);
+    if (local == NULL) {
+        report_undeclared_identifier(checker, call->name, (Node*) call);
+        return 0;
+    }
+    if (local->decl->kind != NodeKind_FunDecl) {
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    '%s' is not a function\n", STR_ARG(checker->ast.tokens.name), call->name);
+        int start = (int) checker->ast.tokens.source_offsets[call->base.start];
+        int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
+        const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+
+        point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+        return 0;
+    }
+
+    NodeFunDecl* fun_decl = &local->decl->fun_decl;
+    if (fun_decl->params != NULL && call->args != NULL) {
+        NodeFunParam* param = NULL;
+        NodeFunParam** params = fun_decl->params;
+        Node** args = call->args;
+        while ((param = *params++) != NULL) {
+            Node* arg = *args++;
+            if (arg == NULL) {
+                fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Too few arguments for function '%s'\n", STR_ARG(checker->ast.tokens.name), call->name);
+                int start = (int) checker->ast.tokens.source_offsets[call->base.start];
+                int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
+                const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+
+                point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+                return 0;
+            }
+            TypeId type = type_check_expression(checker, arg);
+            if (type == 0)
+                return 0;
+            if (type != param->type) {
+                report_type_expectation(checker, "Argument type mismatch", (Node*) param, param->type, type);
+                return 0;
+            }
+        }
+        if (*args != NULL) {
+            fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Too many arguments for function '%s'\n", STR_ARG(checker->ast.tokens.name), call->name);
+            int start = (int) checker->ast.tokens.source_offsets[call->base.start];
+            int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
+            const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+
+            point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+            return 0;
+        }
+    } else if (call->args != NULL) {
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Function '%s' does not take any arguments\n", STR_ARG(checker->ast.tokens.name), call->name);
+        int start = (int) checker->ast.tokens.source_offsets[call->base.start];
+        int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
+        const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+
+        point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+        return 0;
+    } else if (fun_decl->params != NULL) {
+        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Function '%s' requires arguments\n", STR_ARG(checker->ast.tokens.name), call->name);
+        int start = (int) checker->ast.tokens.source_offsets[call->base.start];
+        int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
+        const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+
+        point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+        return 0;
+    }
+
     return -1;
 }
 
@@ -173,9 +240,12 @@ static TypeId type_check_assignment(Checker* checker, NodeAssign* assign) {
     return 0;
 }
 
-static TypeId type_check_block(Checker* checker, NodeBlock* block) {
+static TypeId type_check_block(Checker* checker, NodeBlock* block, int new_block) {
     if (block->nodes != NULL) {
-        size_t parent = push_block(checker);
+        size_t parent =  -1;
+        if (new_block)
+            parent = push_block(checker);
+
         block->id = checker->current - checker->blocks;
         Node* node = NULL;
         Node** nodes = block->nodes;
@@ -183,7 +253,9 @@ static TypeId type_check_block(Checker* checker, NodeBlock* block) {
             if (type_check_statement(checker, node) == 0)
                 return 0;
         }
-        restore_block(checker, parent);
+
+        if (new_block)
+            restore_block(checker, parent);
     }
     return -1;
 }
@@ -211,7 +283,7 @@ static TypeId type_check_fun_decl(Checker* checker, NodeFunDecl* fun_decl) {
         }
     }
 
-    if (type_check_block(checker, fun_decl->block) == 0)
+    if (type_check_block(checker, fun_decl->block, 0) == 0)
         return 0;
 
     restore_block(checker, parent);
@@ -234,10 +306,10 @@ static TypeId type_check_if_stmt(Checker* checker, NodeIf* if_stmt) {
         return 0;
     }
 
-    if (type_check_block(checker, if_stmt->then_block) == 0)
+    if (type_check_block(checker, if_stmt->then_block, 1) == 0)
         return 0;
 
-    if (if_stmt->else_block != NULL && type_check_block(checker, if_stmt->then_block) == 0)
+    if (if_stmt->else_block != NULL && type_check_block(checker, if_stmt->then_block, 1) == 0)
         return 0;
 
     return -1;
@@ -253,10 +325,10 @@ static TypeId type_check_while_stmt(Checker* checker, NodeWhile* while_stmt) {
         return 0;
     }
 
-    if (type_check_block(checker, while_stmt->then_block) == 0)
+    if (type_check_block(checker, while_stmt->then_block, 1) == 0)
         return 0;
 
-    if (while_stmt->else_block != NULL && type_check_block(checker, while_stmt->then_block) == 0)
+    if (while_stmt->else_block != NULL && type_check_block(checker, while_stmt->then_block, 1) == 0)
         return 0;
 
     return -1;
@@ -294,7 +366,7 @@ static TypeId type_check_statement(Checker* checker, Node* node) {
         case NodeKind_While:
             return type_check_while_stmt(checker, &node->while_stmt);
         case NodeKind_Block:
-            return type_check_block(checker, &node->block);
+            return type_check_block(checker, &node->block, 1);
         case NodeKind_FunDecl:
             return type_check_fun_decl(checker, &node->fun_decl);
         default:

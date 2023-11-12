@@ -506,10 +506,36 @@ static NodeFunParam* fun_param(Parser* parser) {
     const char* repr = repr_of_current(parser);
     advance(parser);
 
+    if (current(parser) != Token_Colon) {
+        fprintf(stderr, "Expected ':' after identifier\n");
+        return NULL;
+    }
+    advance(parser);
+
+    if (current(parser) != Token_Identifier) {
+        fprintf(stderr, "Expected type after ':'\n");
+        return NULL;
+    }
+    const char* type_repr = repr_of_current(parser);
+    LiteralType type = LiteralType_Integer;
+    if (strcmp(type_repr, "int") == 0) {
+        type = LiteralType_Integer;
+    } else if (strcmp(type_repr, "real") == 0) {
+        type = LiteralType_Real;
+    } else if (strcmp(type_repr, "str") == 0) {
+        type = LiteralType_String;
+    } else {
+        fprintf(stderr, "Expected type after ':'\n");
+        return NULL;
+    }
+    advance(parser);
+
+
+
     NodeFunParam fun_param = {
         node_base_fun_param(start, start),
         .name = repr,
-        .type = LiteralType_Integer,
+        .type = type,
     };
     return (NodeFunParam*) add_node(parser, node_fun_param(fun_param));
 }

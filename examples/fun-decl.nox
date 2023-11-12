@@ -1,10 +1,13 @@
-fun temp() {
-    print("Hello sailor!")
-    a := "Hello world!"
-    b := "XXX"
-    print(b)
+fun temp(a: str, b: str, c: str) {
+    print(a)
+    print(c)
     print(b)
 }
-temp()
-temp()
-temp()
+temp("AAAA", "BBBB", "CCCC")
+
+fun bla(x: str) {
+    print(x)
+}
+bla("Hello")
+temp("aaaa", "bbbb", "cccc")
+

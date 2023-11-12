@@ -85,6 +85,20 @@ Instruction* jmp(Generator* generator) {
     return generator->instructions + generator->count++;
 }
 
+Instruction* call(Generator* generator) {
+    generator->instructions[generator->count] = (Instruction) {
+            .type = Instruction_Call,
+            .call.label = 0xdeadbeef,
+    };
+    return generator->instructions + generator->count++;
+}
+
+void ret(Generator* generator) {
+    generator->instructions[generator->count++] = (Instruction) {
+            .type = Instruction_Ret,
+    };
+}
+
 
 /* ---------------------------- GENERATOR VISITOR -------------------------------- */
 Register generate_for_expression(Generator* generator, TypedAst ast, Node* node);
@@ -110,7 +124,7 @@ Register generate_for_identifier(Generator* generator, TypedAst ast, NodeIdentif
     Block* current = ast.block;
     for (size_t i = 0; i < current->count; ++i) {
         Local* local = current->locals + i;
-        assert(local->decl->kind == NodeKind_VarDecl || local->decl->kind == NodeKind_FunDecl && "Invalid node kind");
+        assert((local->decl->kind == NodeKind_VarDecl || local->decl->kind == NodeKind_FunDecl || local->decl->kind == NodeKind_FunParam) && "Invalid node kind");
         if (local->decl->var_decl.name == identifier.name) {
             load(generator, generator->current_register, i);
             return generator->current_register++;
@@ -241,9 +255,9 @@ void generate_for_while_stmt(Generator* generator, TypedAst ast, NodeWhile while
     }
 }
 
-Register generate_for_call(Generator* generator, TypedAst ast, NodeCall call) {
-    if (strcmp(call.name, "print") == 0) {
-        Register src = generate_for_expression(generator, ast, call.args[0]);
+Register generate_for_call(Generator* generator, TypedAst ast, NodeCall fn_call) {
+    if (strcmp(fn_call.name, "print") == 0) {
+        Register src = generate_for_expression(generator, ast, fn_call.args[0]);
         generator->instructions[generator->count++] = (Instruction) {
                 .type = Instruction_Print,
                 .call.label = src,
@@ -251,13 +265,28 @@ Register generate_for_call(Generator* generator, TypedAst ast, NodeCall call) {
         return 0;
     }
 
-    assert(call.args == NULL && "not implemented");
-    Instruction* jump = jmp(generator);
+    Node** args = fn_call.args;
+    if (args != NULL) {
+        Node* arg = NULL;
+        while ((arg = *(args++)) != NULL) {
+            generate_for_expression(generator, ast, arg);
+        }
+    }
+
+    Instruction* label = call(generator);
+
+    args = fn_call.args;
+    if (args != NULL) {
+        Node* arg = NULL;
+        while ((arg = *(args++)) != NULL) {
+            generator->current_register--;  // Consume the expression register
+        }
+    }
 
     for (size_t i = 0; i < generator->deferred_blocks_count; ++i) {
         DeferredBlock* deferred = generator->deferred_blocks + i;
-        if (deferred->name == call.name) {
-            deferred->references[deferred->references_count++] = jump;
+        if (deferred->name == fn_call.name) {
+            deferred->references[deferred->references_count++] = label;
             return generator->current_register++;
         }
     }
@@ -265,8 +294,6 @@ Register generate_for_call(Generator* generator, TypedAst ast, NodeCall call) {
 }
 
 void generate_for_fun_decl(Generator* generator, TypedAst ast, NodeFunDecl fun_decl) {
-    assert(fun_decl.params == NULL && "not implemented");
-
     generator->deferred_blocks[generator->deferred_blocks_count++] = (DeferredBlock) {
         .name = fun_decl.name,
         .node = (Node*) fun_decl.block,
@@ -337,21 +364,20 @@ Bytecode generate_code(TypedAst ast) {
         .type = Instruction_Exit,
     };
 
-    size_t return_label = generator.count - 1;
     for (size_t i = 0; i < generator.deferred_blocks_count; ++i) {
         DeferredBlock* deferred = generator.deferred_blocks + i;
         for (size_t j = 0; j < deferred->references_count; ++j) {
             Instruction* instruction = deferred->references[j];
-            instruction->jmp.label = generator.count;
+            instruction->call.label = generator.count;
         }
         generate_for_statement(&generator, ast, deferred->node);
-        jmp(&generator)->jmp.label = return_label;
+        ret(&generator);
     }
 
     // Check all labels are patched
     for (size_t i = 0; i < generator.count; ++i) {
         Instruction* instruction = generator.instructions + i;
-        if (instruction->type == Instruction_JmpZero || instruction->type == Instruction_Jmp) {
+        if (instruction->type == Instruction_JmpZero || instruction->type == Instruction_Jmp || instruction->type == Instruction_Call) {
             assert(instruction->jmp.label != 0xdeadbeef && "Invalid label");
         }
     }
