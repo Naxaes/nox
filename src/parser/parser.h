@@ -69,55 +69,56 @@ typedef enum {
 
 
 #define ALL_NODES(X) \
-    X(Literal, literal, NodeFlag_Is_Expression|NodeFlag_Is_Constant, {  \
+    X(Literal, literal, NodeFlag_Is_Expression|NodeFlag_Is_Constant,    \
         LiteralValue value;                                             \
         LiteralType  type;                                              \
-    })                                                                  \
-    X(Identifier, identifier, NodeFlag_Is_Expression, {                 \
+    )                                                                   \
+    X(Identifier, identifier, NodeFlag_Is_Expression,                   \
         const char* name;                                               \
-    })                                                                  \
-    X(Binary, binary, NodeFlag_Is_Expression, {                         \
+    )                                                                   \
+    X(Binary, binary, NodeFlag_Is_Expression,                           \
         Node* left;                                                     \
         Node* right;                                                    \
         BinaryOp op;                                                    \
-    })                                                                  \
-    X(Call, call, NodeFlag_Is_Expression, {                             \
+    )                                                                   \
+    X(Call, call, NodeFlag_Is_Expression,                               \
         const char* name;                                               \
         Node** args;                                                    \
-    })                                                                  \
-    X(Assign, assign, NodeFlag_Is_Statement, {                          \
+    )                                                                   \
+    X(Assign, assign, NodeFlag_Is_Statement,                            \
         const char* name;                                               \
         Node* expression;                                               \
-    })                                                                  \
-    X(VarDecl, var_decl, NodeFlag_Is_Statement, {                       \
+    )                                                                   \
+    X(VarDecl, var_decl, NodeFlag_Is_Statement,                         \
         const char* name;                                               \
         Node* expression;                                               \
-    })                                                                  \
-    X(Block, block, NodeFlag_Is_Statement, {                            \
-        size_t id;                                                      \
+    )                                                                   \
+    X(Block, block, NodeFlag_Is_Statement,                              \
+        i32    id;                                                      \
+        i32    parent;                                                  \
         Node** nodes;                                                   \
-    })                                                                  \
-    X(FunParam, fun_param, NodeFlag_Is_Statement, {                     \
+    )                                                                   \
+    X(FunParam, fun_param, NodeFlag_Is_Statement,                       \
         const char* name;                                               \
         u32 type;                                                       \
         Node* expression;                                               \
-    })                                                                  \
-    X(FunDecl, fun_decl, NodeFlag_Is_Statement, {                       \
+    )                                                                   \
+    X(FunDecl, fun_decl, NodeFlag_Is_Statement,                         \
         const char* name;                                               \
         NodeFunParam** params;                                          \
         u32 return_type;                                                \
         NodeBlock* block;                                               \
-    })                                                                  \
-    X(If, if_stmt, NodeFlag_Is_Statement, {                             \
+    )                                                                   \
+    X(If, if_stmt, NodeFlag_Is_Statement,                               \
         Node* condition;                                                \
         NodeBlock* then_block;                                          \
         NodeBlock* else_block;                                          \
-    })                                                                  \
-    X(While, while_stmt, NodeFlag_Is_Statement, {                       \
+    )                                                                   \
+    X(While, while_stmt, NodeFlag_Is_Statement,                         \
         Node* condition;                                                \
         NodeBlock* then_block;                                          \
         NodeBlock* else_block;                                          \
-    })                                                                  \
+    )                                                                   \
 
 
 #define X(upper, lower, flags, body) NodeKind_##upper,
@@ -135,7 +136,7 @@ typedef struct {
     TokenIndex end;
 } NodeBase;
 
-#define X(upper, lower, flags, body) typedef struct { NodeBase base; struct body; } Node##upper;
+#define X(upper, lower, flags, body) typedef struct { NodeBase base; body } Node##upper;
     ALL_NODES(X)
 #undef X
 

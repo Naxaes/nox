@@ -138,7 +138,7 @@ static void visit_block(AstPrinter* printer, const NodeBlock* node) {
     Location location = location_of_node(printer->ast, (Node*)node);
     const char* path = printer->ast->tokens.name.data;
 
-    fprintf(printer->output, "Block: id=%d @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), path, location.row, location.column);
+    fprintf(printer->output, "Block: id=%d, parent='%d', block_id='%d' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), node->parent, node->id, path, location.row, location.column);
 
     printer->indentation += 1;
     Node* stmt = NULL;

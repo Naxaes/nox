@@ -17,9 +17,13 @@ typedef struct {
 } Block;
 
 typedef struct {
-    Node*   nodes;
+    // Extracted from the untyped ast.
+    Node*  nodes;
+    Node** views;
+    Node*  start;
+
+    // Type checked info.
     Block*  block;
-    Node*   start;
 } TypedAst;
 
 TypedAst type_check(UntypedAst ast);
