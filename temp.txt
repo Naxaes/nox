@@ -1,0 +1,145 @@
+
+---- Error handling ----
+A function usually returns one or multiple values,
+but can also return either empty values or an error.
+
+The error type is a distinct integer set, which
+can be used to identify the error. It can be handled
+ergonomically with the `catch` keyword.
+
+The catch keyword 'catches' the error, either
+anonymously or by binding it to a variable,
+followed by a statement.
+
+Error types are defined by name before '!' in the
+function signature. Multiple error types can be
+combined with the '|' operator, or by constructing
+a new error set with `error <name> = <error set>`.
+
+    fn danger(x: int) Danger!i32 {
+      if x == 0 throw .Danger else return 10
+    }
+
+    fn main() {
+      // Error: The error is not handled
+      a := danger(0)
+
+      // Ok: The error is caught anonymously and
+      //     handled by a single expression statement.
+      a := danger(0) catch 0
+
+      // Ok: The error is caught explicitly and assigned
+      //     to the variable `error`, which is then used
+      //     in the expression block.
+      a := danger(0) catch as error {
+        println(error)  // Prints the error 'Danger'
+        0
+      }
+
+      // Ok: The error is caught explicitly and propagated
+      //     to the caller.
+      d := danger(0) or throw "Failed to parse input"
+    }
+
+Since errors are simple integer sets, you can't pass
+any error message to the caller.
+
+
+    fn danger(x: int) Danger!i32 {
+      if x == 0 throw .Danger("x must be non-zero") else return 10
+    }
+
+    fn main() {
+      a := danger(0) catch as error {
+        // The error set 'Danger' does not have a message,
+        // this will only print the error set name.
+        println(error)
+        0
+      }
+
+      // Set the logger context to print the error message
+      context.error_logger = fn(error: Error, format: string, args: ...) { println(format, args...) }
+      a := danger(0) catch 0
+
+      // You can also capture the error.
+      message := [256]char
+      context.error_data = &message
+      context.error_logger = fn(error: Error, format: string, args: ...) { str_copy(&context.message, format, args...) }
+      a := danger(0) catch {
+        println(message)
+        0
+      }
+
+
+      // Reset the logger context to disable error messages
+      context.error_data = None
+      context.error_logger = None
+    }
+
+Usually most errors are handled by precondition checks instead
+of using error types.
+
+     fn sqrt(x: real where x >= 0) real {
+       ...
+     }
+
+Preconditions can be checked at just like error sets.
+
+     // Some modules are always available and can be
+     // accessed with the `use` keyword.
+     // `import` is used to import a module externally.
+     use math.sqrt
+     use os.input
+
+     fn main() {
+       // Error: precondition failed due to -1 < 0
+       // sqrt(-1)
+
+       // Error: precondition failed due to input() could be negative.
+       // sqrt(input().parse(f32) or 0)
+
+       // OK: Precondition is checked
+       a := input().parse(f32)
+       b := if a >= 0 then sqrt(a) else 0
+
+       // Ok: This is just syntactic sugar for the statement above
+       a := input().parse(f32)
+       b := sqrt(a) catch 0
+
+       // OK: The user has asserted that a >= 0
+       a := input().parse(f32)
+       assert a >= 0
+       b := sqrt(a)
+     }
+
+
+struct Monster {
+    name: string
+    health: int
+    damage: int
+    speed: int
+    position: Vec2
+}
+
+fn main(monster: &Monster) {
+    a := 10
+    while a < 20 {
+        a = a + 1
+    }
+
+    &health = monster.health
+    &health = health - 10
+
+    &name = make_uppercase(&monster.name)
+    println("The monster's name is %s", name)
+
+    b := name
+}
+
+
+
+
+
+
+
+

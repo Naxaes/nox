@@ -13,53 +13,53 @@
 void token_array_free(TokenArray tokens) {
     free(tokens.tokens);
     free(tokens.identifiers);
-    free(tokens.indices);
-    free(tokens.interned_strings);
+    free(tokens.source_offsets);
+    free(tokens.data_pool);
 }
 
 
 /* ---------------------------- LEXER HELPERS -------------------------------- */
 typedef struct {
-    u32*   intern_string_lookup;
-    u8*    interned_strings;
-    size_t interned_string_size;
-} Interner;
+    u32*   lookup;
+    u8*    data;
+    size_t used;
+} InternPool;
 
-static Interner interner_make(void) {
-    return (Interner) {
-        .intern_string_lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
-        .interned_strings     = (u8*) malloc(1024),
-        .interned_string_size = sizeof(Str),  // Skip the first few bytes so that 0 from the lookup table means "not found".
+static InternPool intern_pool_make(void) {
+    return (InternPool) {
+        .lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
+        .data   = (u8*) malloc(1024),
+        .used   = sizeof(DataPoolIndex),  // Skip the first few bytes so that 0 from the lookup table means "not found".
     };
 }
 
-static IdentId intern_string(Interner* interner, Str string) {
+static DataPoolIndex intern_string(InternPool* intern_pool, Str string) {
     u64 index  = str_hash(string) & (1024-1);
-    u32 offset = interner->intern_string_lookup[index];
+    u32 offset = intern_pool->lookup[index];
 
     do {
         // If the offset is 0, we have not found a match,
         // which means that the string is not interned yet.
         if (offset == 0) {
-            offset = interner->interned_string_size;
+            offset = intern_pool->used;
 
             // Copy over the data and a null pointer at the end.
-            memcpy(interner->interned_strings + interner->interned_string_size, string.data, string.size);
-            memset(interner->interned_strings + interner->interned_string_size + string.size, '\0', 1);
+            memcpy(intern_pool->data + intern_pool->used, string.data, string.size);
+            memset(intern_pool->data + intern_pool->used + string.size, '\0', 1);
 
-            interner->interned_string_size += string.size + 1;
-            interner->intern_string_lookup[index] = offset;
+            intern_pool->used += string.size + 1;
+            intern_pool->lookup[index] = offset;
             return offset;
         }
 
-        const char* candidate = (const char*) (interner->interned_strings + offset);
+        const char* candidate = (const char*) (intern_pool->data + offset);
         if (strncmp(string.data, candidate, string.size) == 0) {
             // We found a match! Returned the cached offset.
             return offset;
         } else {
             // Go to the next entry in the lookup table.
             index = (index + 1) & (1024-1);
-            offset = interner->intern_string_lookup[index];
+            offset = intern_pool->lookup[index];
         }
     } while (1);
 }
@@ -77,33 +77,33 @@ static inline int is_identifier_continue(char c) {
 typedef struct {
     Str source;
 
-    size_t   count;
-    Token*   tokens;
-    IdentId* identifiers;
-    size_t*  indices;
+    size_t          count;
+    Token*          tokens;
+    DataPoolIndex*  identifiers;
+    SourceIndex*    indices;
 
-    Interner interner;
+    InternPool intern_pool;
 } Lexer;
 
 static void lexer_free(Lexer* lexer) {
     free(lexer->tokens);
     free(lexer->identifiers);
     free(lexer->indices);
-    free(lexer->interner.intern_string_lookup);
-    free(lexer->interner.interned_strings);
+    free(lexer->intern_pool.lookup);
+    free(lexer->intern_pool.data);
 }
 
 static TokenArray lexer_to_token_array(Lexer* lexer, Str name) {
-    free(lexer->interner.intern_string_lookup);
+    free(lexer->intern_pool.lookup);
     return (TokenArray) {
-            name,
-            lexer->source,
-            lexer->tokens,
-            lexer->identifiers,
-            lexer->indices,
-            lexer->count,
-            lexer->interner.interned_strings,
-            lexer->interner.interned_string_size
+            .name        = name,
+            .source      = lexer->source,
+            .tokens      = lexer->tokens,
+            .identifiers = lexer->identifiers,
+            .source_offsets = lexer->indices,
+            .size        = lexer->count,
+            .data_pool   = lexer->intern_pool.data,
+            .data_pool_size = lexer->intern_pool.used
     };
 }
 
@@ -206,7 +206,7 @@ static inline int add_double_token(Lexer* lexer, const char* current, Token toke
 }
 
 static inline int add_token_with_identifier(Lexer* lexer, const char* current, Token token, Str identifier) {
-    IdentId ident = intern_string(&lexer->interner, identifier);
+    DataPoolIndex ident = intern_string(&lexer->intern_pool, identifier);
     lexer->indices[lexer->count] = current - lexer->source.data;
     lexer->identifiers[lexer->count] = ident;
     lexer->tokens[lexer->count++] = (Token) { token };
@@ -222,44 +222,23 @@ static Token token_from_string(Str string) {
     return Token_Identifier;
 }
 
-const char* lexer_repr_of(TokenArray tokens, TokenId id) {
+const char* lexer_repr_of(TokenArray tokens, TokenIndex id) {
     Token token = tokens.tokens[id];
-    switch (token) {
-        case Token_Invalid:           return "<Invalid>";
-        case Token_Plus:              return "+";
-        case Token_Asterisk:          return "*";
-        case Token_Equal:             return "=";
-        case Token_Eof:               return "<EOF>";
-        case Token_Minus:             return "-";
-        case Token_Slash:             return "/";
-        case Token_Percent:           return "%";
-        case Token_Less:              return "<";
-        case Token_Less_Equal:        return "<=";
-        case Token_Equal_Equal:       return "==";
-        case Token_Exclamation_Equal: return "!=";
-        case Token_Greater_Equal:     return ">=";
-        case Token_Greater:           return ">";
-        case Token_Exclamation:       return "!";
-        case Token_Open_Paren:        return "(";
-        case Token_Close_Paren:       return ")";
-        case Token_Open_Brace:        return "{";
-        case Token_Close_Brace:       return "}";
-        case Token_Comma:             return ",";
-        case Token_Colon:             return ":";
-        case Token_Colon_Equal:       return ":=";
-        case Token_If:                return "if";
-        case Token_Else:              return "else";
-        case Token_While:             return "while";
-        case Token_Fun:               return "fun";
+    const char* repr = token_repr(token);
+    if (repr != 0)
+        return repr;
 
+    switch (token) {
         case Token_Number:
         case Token_Real:
         case Token_String:
         case Token_Identifier: {
             size_t offset = tokens.identifiers[id];
-            const char* repr = (const char*) &tokens.interned_strings[offset];
+            repr = (const char*) &tokens.data_pool[offset];
             return repr;
         }
+        default:
+            assert(0 && "Unreachable");
     }
 }
 
@@ -269,9 +248,9 @@ TokenArray lexer_lex(Str name, Str source) {
         .source = source,
         .count  = 0,
         .tokens = (Token*) malloc(1024 * sizeof(Token)),
-        .identifiers = (IdentId*) malloc(1024 * sizeof(IdentId)),
-        .indices = (size_t*) malloc(1024 * sizeof(size_t)),
-        .interner = interner_make()
+        .identifiers = (DataPoolIndex*) malloc(1024 * sizeof(DataPoolIndex)),
+        .indices = (SourceIndex*) malloc(1024 * sizeof(SourceIndex)),
+        .intern_pool = intern_pool_make()
     };
 
     const char* current = source.data;
@@ -329,9 +308,9 @@ TokenArray lexer_lex(Str name, Str source) {
             } break;
             case '!': {
                 if (*(current+1) == '=')
-                    current += add_double_token(&lexer, current, Token_Exclamation_Equal);
+                    current += add_double_token(&lexer, current, Token_Bang_Equal);
                 else
-                    current += add_single_token(&lexer, current, Token_Exclamation);
+                    current += add_single_token(&lexer, current, Token_Bang);
             } break;
             case '<': {
                 if (*(current+1) == '=')

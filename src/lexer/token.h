@@ -1,77 +1,54 @@
 #pragma once
 
 typedef enum {
-    Token_Invalid = 0,
+    TokenGroup_None = 0,
+    TokenGroup_Literal,
+    TokenGroup_Binary_Arithmetic_Operator,
+    TokenGroup_Binary_Comparison_Operator,
+    TokenGroup_Keyword,
+} TokenGroup;
 
-    Token_Number,
-        Token_Literal_Start = Token_Number,
-        Token_Real,
-        Token_String,
-    Token_Literal_End = Token_String,
 
-    Token_Identifier,
+// X(upper, lower, repr, group)
+#define ALL_TOKENS(X) \
+    X(Number,         number,        0,         Literal)                            \
+    X(Real,           real,          0,         Literal)                            \
+    X(String,         string,        0,         Literal)                            \
+    X(Identifier,     identifier,    0,         None)                               \
+    X(Plus,           plus,          "+",       Binary_Arithmetic_Operator)         \
+    X(Minus,          minus,         "-",       Binary_Arithmetic_Operator)         \
+    X(Asterisk,       asterisk,      "*",       Binary_Arithmetic_Operator)         \
+    X(Slash,          slash,         "/",       Binary_Arithmetic_Operator)         \
+    X(Percent,        percent,       "%",       Binary_Arithmetic_Operator)         \
+    X(Less,           less,          "<",       Binary_Comparison_Operator)         \
+    X(Less_Equal,     less_equal,    "<=",      Binary_Comparison_Operator)         \
+    X(Equal_Equal,    equal_equal,   "==",      Binary_Comparison_Operator)         \
+    X(Bang_Equal,     bang_equal,    "!=",      Binary_Comparison_Operator)       \
+    X(Greater_Equal,  greater_equal, ">=",      Binary_Comparison_Operator)         \
+    X(Greater,        greater,       ">",       Binary_Comparison_Operator)         \
+    X(Bang,           bang,          "!",       None)                               \
+    X(Equal,          equal,         "=",       None)                               \
+    X(Colon,          colon,         ":",       None)                               \
+    X(Colon_Equal,    colon_equal,   ":=",      None)                               \
+    X(If,             if,            "if",      Keyword)                            \
+    X(Else,           else,          "else",    Keyword)                            \
+    X(Fun,            fun,           "fun",     Keyword)                            \
+    X(While,          while,         "while",   Keyword)                            \
+    X(Open_Paren,     open_paren,    "(",       None)                               \
+    X(Close_Paren,    close_paren,   ")",       None)                               \
+    X(Open_Brace,     open_brace,    "{",       None)                               \
+    X(Close_Brace,    close_brace,   "}",       None)                               \
+    X(Comma,          comma,         ",",       None)                               \
+    X(Eof,            eof,           "\0",      None)
 
-    Token_Plus,
-        Token_Binary_Operator_Start = Token_Plus,
-            Token_Binary_Arithmetic_Operator_Start = Token_Plus,
-            Token_Minus,
-            Token_Asterisk,
-            Token_Slash,
-            Token_Percent,
-        Token_Binary_Arithmetic_Operator_End = Token_Percent,
 
-        Token_Less,
-            Token_Binary_Comparison_Operator_Start = Token_Less,
-            Token_Less_Equal,
-            Token_Equal_Equal,
-            Token_Exclamation_Equal,
-            Token_Greater_Equal,
-            Token_Greater,
-            Token_Binary_Comparison_Operator_End = Token_Greater,
-    Token_Binary_Operator_End = Token_Binary_Comparison_Operator_End,
-
-    Token_Exclamation,
-    Token_Equal,
-    Token_Colon,
-    Token_Colon_Equal,
-
-    Token_If,
-        Token_Keywords_Start = Token_If,
-        Token_Else,
-        Token_Fun,
-        Token_While,
-    Token_Keywords_End = Token_While,
-
-    Token_Open_Paren,
-    Token_Close_Paren,
-    Token_Open_Brace,
-    Token_Close_Brace,
-
-    Token_Comma,
-
-    Token_Eof,
+typedef enum {
+#define X(upper, lower, body, value) Token_##upper,
+    ALL_TOKENS(X)
+#undef X
 } Token;
-#define TOKEN_COUNT (Token_Eof + 1)
-
-static inline int token_is_literal(Token token) {
-    return Token_Literal_Start <= token && token <= Token_Literal_End;
-}
-
-static inline int token_is_binary_operator(Token token) {
-    return Token_Binary_Operator_Start <= token && token <= Token_Binary_Operator_End;
-}
-
-static inline int token_is_binary_arithmetic_operator(Token token) {
-    return Token_Binary_Arithmetic_Operator_Start <= token && token <= Token_Binary_Arithmetic_Operator_End;
-}
-
-static inline int token_is_binary_logic_operator(Token token) {
-    return Token_Binary_Comparison_Operator_Start <= token && token <= Token_Binary_Comparison_Operator_End;
-}
-
-static inline int token_is_keyword(Token token) {
-    return Token_Keywords_Start <= token && token <= Token_Keywords_End;
-}
 
 
+const char* token_repr(Token token);
+TokenGroup token_group(Token token);
 

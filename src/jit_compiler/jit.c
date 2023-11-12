@@ -16,10 +16,6 @@ JitFunction jit_compile_aarch64(Bytecode code) {
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
         switch (instruction.type) {
-            case Instruction_Invalid: {
-                fprintf(stderr, "[WARN]: (Jit) Invalid instruction '%d'\n", instruction.type);
-                return NULL;
-            } break;
             case Instruction_MovImm64: {
                 u8  src = instruction.arg1;
                 u64 value = instruction.arg2;
@@ -87,10 +83,6 @@ JitFunction jit_compile_x86_64(Bytecode code) {
     for (size_t i = 0; i < code.size; ++i) {
         Instruction instruction = code.instructions[i];
         switch (instruction.type) {
-            case Instruction_Invalid: {
-                fprintf(stderr, "[WARN]: (Jit) Invalid instruction '%d'\n", instruction.type);
-                return NULL;
-            } break;
             case Instruction_MovImm64: {
                 u8 src = instruction.arg1;
                 u64 value = instruction.arg2;

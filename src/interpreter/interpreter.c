@@ -19,12 +19,6 @@ i64 interpret(Bytecode code) {
     while (interpreter.ip < interpreter.instructions_size) {
         Instruction instruction = interpreter.instructions[interpreter.ip++];
         switch (instruction.type) {
-            case Instruction_Invalid: {
-                fprintf(stderr, "[WARN]: (Interpreter) Invalid instruction '%d'\n", instruction.type);
-                free(interpreter.stack);
-                free(interpreter.registers);
-                return 1;
-            } break;
             case Instruction_MovImm64: {
                 Register register_index = instruction.arg1;
                 u64 value = instruction.arg2;
