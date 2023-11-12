@@ -15,14 +15,3 @@ fun bla(x: str) {
 bla("Hello")
 temp("aaaa", "bbbb", "cccc")
 
-
-a := 1
-{
-    a := 2
-    print(a)
-    {
-        a := 3
-        print(a)
-    }
-}
-
