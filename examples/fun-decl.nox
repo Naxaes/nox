@@ -1,0 +1,10 @@
+fun temp() {
+    print("Hello sailor!")
+    a := "Hello world!"
+    b := "XXX"
+    print(b)
+    print(b)
+}
+temp()
+temp()
+temp()

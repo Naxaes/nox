@@ -17,46 +17,46 @@ JitFunction jit_compile_aarch64(Bytecode code) {
         Instruction instruction = code.instructions[i];
         switch (instruction.type) {
             case Instruction_MovImm64: {
-                u8  src = instruction.arg1;
-                u64 value = instruction.arg2;
+                u8  dst = instruction.imm.dst;
+                u64 val = instruction.imm.val;
 
-                u32 inst = aarch64_mov_imm(src, value);
+                u32 inst = aarch64_mov_imm(dst, val);
                 if (inst == 0)
                     return NULL;
                 machine_code[size++] = inst;
             } break;
             case Instruction_Mov: {
                 // MOV Xd, Xn
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u32 inst = aarch64_mov_reg(dst, src);
                 machine_code[size++] = inst;
             } break;
             case Instruction_Add: {
                 // ADD Xd, Xn, Xm
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u32 inst = aarch64_add(dst, src);
                 machine_code[size++] = inst;
             } break;
             case Instruction_Mul: {
                 // MUL Xd, Xn, Xm
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u32 inst = aarch64_mul(dst, src);
                 machine_code[size++] = inst;
             } break;
             case Instruction_Store: {
                 // MOV Xd, Xn, Xm
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u32 inst = aarch64_mov_reg(dst, src);
                 machine_code[size++] = inst;
             } break;
             case Instruction_Load: {
                 // MOV Xd, Xn, Xm
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u32 inst = aarch64_mov_reg(dst, src);
                 machine_code[size++] = inst;
             } break;
@@ -84,52 +84,52 @@ JitFunction jit_compile_x86_64(Bytecode code) {
         Instruction instruction = code.instructions[i];
         switch (instruction.type) {
             case Instruction_MovImm64: {
-                u8 src = instruction.arg1;
-                u64 value = instruction.arg2;
+                u64 dst = instruction.imm.dst;
+                u64 val = instruction.imm.val;
 
-                if (value >= 1uLL << 32) {
+                if (val >= 1uLL << 32) {
                     printf("[ERROR]: mov only supports 32-bit immediate\n");
                     return NULL;
                 }
 
-                u8 inst[] = x86_64_mov_imm32(src, value);
+                u8 inst[] = x86_64_mov_imm32(dst, val);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;
             case Instruction_Mov: {
                 // movl %enx %enx
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u8 inst[] = x86_64_mov_reg(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;
             case Instruction_Add: {
                 // addl %enx %enx
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u8 inst[] = x86_64_add(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;
             case Instruction_Mul: {
                 // imul %enx %enx
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u8 inst[] = x86_64_mul(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
             } break;
             case Instruction_Store: {
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u8 inst[] = x86_64_mov_reg(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);
              } break;
             case Instruction_Load: {
-                u8 dst = instruction.arg1;
-                u8 src = instruction.arg2;
+                u8 dst = instruction.reg.dst;
+                u8 src = instruction.reg.src;
                 u8 inst[] = x86_64_mov_reg(dst, src);
                 memcpy(&machine_code[size], inst, sizeof(inst));
                 size += sizeof(inst);

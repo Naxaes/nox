@@ -94,9 +94,10 @@ typedef enum {
         Node* expression;                                               \
     })                                                                  \
     X(Block, block, NodeFlag_Is_Statement, {                            \
+        size_t id;                                                      \
         Node** nodes;                                                   \
     })                                                                  \
-    X(FunParam, fun_param, NodeFlag_Is_Expression, {                    \
+    X(FunParam, fun_param, NodeFlag_Is_Statement, {                     \
         const char* name;                                               \
         u32 type;                                                       \
         Node* expression;                                               \
@@ -104,7 +105,7 @@ typedef enum {
     X(FunDecl, fun_decl, NodeFlag_Is_Statement, {                       \
         const char* name;                                               \
         NodeFunParam** params;                                          \
-        u32 return_count;                                               \
+        u32 return_type;                                                \
         NodeBlock* block;                                               \
     })                                                                  \
     X(If, if_stmt, NodeFlag_Is_Statement, {                             \

@@ -4,6 +4,27 @@
 #include "type_checker/checker.h"
 
 
+#define ALL_INSTRUCTIONS \
+    X(MovImm64) \
+    X(Mov) \
+    X(Add) \
+    X(Sub) \
+    X(Mul) \
+    X(Div) \
+    X(Mod) \
+    X(Lt) \
+    X(Le) \
+    X(Eq) \
+    X(Ne) \
+    X(Ge) \
+    X(Gt) \
+    X(Store) \
+    X(Load) \
+    X(Jmp) \
+    X(JmpZero) \
+    X(Print) \
+    X(Exit)
+
 typedef enum {
     Instruction_MovImm64,
     Instruction_Mov,
@@ -28,8 +49,23 @@ typedef enum {
 
 typedef struct {
     InstructionType type;
-    u64 arg1;
-    u64 arg2;
+    union {
+        struct {
+            u64 dst;
+            u64 val;
+        } imm;
+        struct {
+            u64 dst;
+            u64 src;
+        } reg;
+        struct {
+            u64 label;
+            u64 src;
+        } jmp;
+        struct {
+            u64 label;
+        } call;
+    };
 } Instruction;
 
 typedef u32 Register;

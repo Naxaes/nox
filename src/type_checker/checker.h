@@ -7,7 +7,7 @@
 typedef u32 TypeId;
 typedef struct {
     TypeId type;
-    Node   decl;
+    Node*  decl;
 } Local;
 
 typedef struct {
@@ -18,7 +18,7 @@ typedef struct {
 
 typedef struct {
     Node*   nodes;
-    Block*  blocks;
+    Block*  block;
     Node*   start;
 } TypedAst;
 

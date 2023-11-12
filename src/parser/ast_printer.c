@@ -87,8 +87,23 @@ static void visit_binary(AstPrinter* printer, const NodeBinary* node) {
 }
 
 static void visit_call(AstPrinter* printer, const NodeCall* node) {
-    (void)printer;
-    (void)node;
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "FunCall: id=%d, name='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), node->name, path, location.row, location.column);
+
+    if (node->args != NULL) {
+        printer->indentation += 1;
+        Node* stmt = NULL;
+        int i = 0;
+        while ((stmt = *(node->args + i)) != NULL) {
+            print_indentation(node->args[i+1] == NULL, "arg%d", i);
+            visit((Visitor*) printer, stmt);
+            i += 1;
+        }
+        printer->indentation -= 1;
+    }
+    printer_rst();
 }
 
 static void visit_var_decl(AstPrinter* printer, const NodeVarDecl* node) {
@@ -128,23 +143,49 @@ static void visit_block(AstPrinter* printer, const NodeBlock* node) {
     printer->indentation += 1;
     Node* stmt = NULL;
     int i = 0;
-    while ((stmt = *(node->nodes + i)) != NULL) {
-        print_indentation(node->nodes[i+1] == NULL, "stmt%d", i);
-        visit((Visitor*) printer, stmt);
-        i += 1;
+    if (node->nodes != NULL) {
+        while ((stmt = *(node->nodes + i)) != NULL) {
+            print_indentation(node->nodes[i+1] == NULL, "stmt%d", i);
+            visit((Visitor*) printer, stmt);
+            i += 1;
+        }
     }
     printer->indentation -= 1;
     printer_rst();
 }
 
 static void visit_fun_param(AstPrinter* printer, const NodeFunParam* node) {
-    (void)printer;
-    (void)node;
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* repr = lexer_repr_of(printer->ast->tokens, node->base.start);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "FunParam: id=%d, name='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, path, location.row, location.column);
 }
 
 static void visit_fun_decl(AstPrinter* printer, const NodeFunDecl* node) {
-    (void)printer;
-    (void)node;
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* repr = lexer_repr_of(printer->ast->tokens, node->base.start);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "FunDecl: id=%d, repr='%s', name='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, node->name, path, location.row, location.column);
+
+    printer->indentation += 1;
+
+    if (node->params != NULL) {
+        NodeFunParam* param = NULL;
+        int i = 0;
+        while ((param = *(node->params + i)) != NULL) {
+            print_indentation(0, "param%d", i);
+            visit((Visitor*) printer, (Node*)param);
+            i += 1;
+        }
+    }
+
+    print_indentation(1, "body");
+    visit_block(printer, node->block);
+    printer->indentation -= 1;
+
+    printer_rst();
 }
 
 static void visit_if_stmt(AstPrinter* printer, const NodeIf* node) {
