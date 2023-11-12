@@ -5,7 +5,6 @@
 
 
 typedef enum {
-    Instruction_Invalid,
     Instruction_MovImm64,
     Instruction_Mov,
     Instruction_Add,

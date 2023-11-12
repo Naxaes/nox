@@ -22,14 +22,14 @@ if(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 elseif(UNIX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -Wno-c11-extensions -Wno-gnu-binary-literal ")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -fsanitize=fuzzer,address,undefined,leak,signed-integer-overflow")  # memory
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g")# -fsanitize=fuzzer,address,undefined,leak,signed-integer-overflow")  # memory
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 endif()
 
 set(SOURCES
     src/lexer/lexer.c
+    src/lexer/token.c
     src/parser/parser.c
-    src/parser/tree_writer.c
     src/type_checker/checker.c
     src/code_generator/generator.c
     src/code_generator/disassembler.c
@@ -42,6 +42,8 @@ set(SOURCES
     src/jit_compiler/jit.c
     src/os/memory.c
     src/transpiler/c_transpiler.c
+    src/parser/visitor.c
+    src/parser/ast_printer.c
 )
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)

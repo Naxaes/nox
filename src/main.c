@@ -1,6 +1,6 @@
 #include "lexer/lexer.h"
 #include "parser/parser.h"
-#include "parser/tree_writer.h"
+#include "parser/ast_printer.h"
 #include "type_checker/checker.h"
 #include "code_generator/generator.h"
 #include "code_generator/disassembler.h"
@@ -36,7 +36,7 @@ InterpreterResult run(Str name, Str source, int verbose) {
         return (InterpreterResult) { 0, 1 };
     }
 
-    tree_write(grammar_tree, stdout);
+    ast_print(grammar_tree, stdout);
 
     TypedAst typed_tree = type_check(grammar_tree);
     if (typed_tree.nodes == NULL) {

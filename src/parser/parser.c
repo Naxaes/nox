@@ -6,81 +6,88 @@
 #include <assert.h>
 
 
-const char* literal_type_name(enum LiteralType type) {
-    static const char* TYPE_NAMES[] = {
-        [Literal_Boolean] = "bool",
-        [Literal_Integer] = "int",
-        [Literal_Real]    = "real",
-        [Literal_String]  = "string",
-    };
-    return TYPE_NAMES[type];
+const char* literal_type_name(LiteralType type) {
+#define X(upper, lower, repr) case LiteralType_##upper: return #lower;
+    switch (type) {
+        ALL_LITERAL_TYPES(X)
+    }
+#undef X
+}
+
+const char* literal_type_repr(LiteralType type) {
+#define X(upper, lower, repr) case LiteralType_##upper: return #repr;
+    switch (type) {
+        ALL_LITERAL_TYPES(X)
+    }
+#undef X
+}
+
+const char* binary_op_name(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return #lower;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+const char* binary_op_repr(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return #repr;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+BinaryOpGroup binary_op_group(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
 }
 
 
 /* ---------------------------- NODE HELPERS -------------------------------- */
 int node_is_expression(const Node* node) {
+#define X(upper, lower, flags, body) case NodeKind_##upper: return (flags) & NodeFlag_Is_Expression;
     switch (node->kind) {
-        case NodeKind_Literal:
-        case NodeKind_Identifier:
-        case NodeKind_Call:
-        case NodeKind_Binary:
-            return 1;
-        default:
-            return 0;
+        ALL_NODES(X)
     }
+#undef X
 }
 
 int node_is_statement(const Node* node) {
-    return node->base.kind != NodeKind_Invalid;
+#define X(upper, lower, flags, body) case NodeKind_##upper: return (flags) & NodeFlag_Is_Statement;
+    switch (node->kind) {
+        ALL_NODES(X)
+    }
+#undef X
+}
+
+int node_is_constant(const Node* node) {
+#define X(upper, lower, flags, body) case NodeKind_##upper: return (flags) & NodeFlag_Is_Constant;
+    switch (node->kind) {
+        ALL_NODES(X)
+    }
+#undef X
 }
 
 
 /* ---------------------------- BINARY OP HELPERS -------------------------------- */
-const char* binary_op_repr(NodeBinary binary) {
-    switch (binary.op) {
-        case Binary_Operation_Add:  return "+";
-        case Binary_Operation_Sub:  return "-";
-        case Binary_Operation_Mul:  return "*";
-        case Binary_Operation_Div:  return "/";
-        case Binary_Operation_Mod:  return "%";
-        case Binary_Operation_Lt:   return "<";
-        case Binary_Operation_Le:   return "<=";
-        case Binary_Operation_Eq:   return "==";
-        case Binary_Operation_Ne:   return "!=";
-        case Binary_Operation_Ge:   return ">=";
-        case Binary_Operation_Gt:   return ">";
-        default:
-            assert(0 && "Invalid binary operation");
+int binary_op_is_arithmetic(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group == BinaryOpGroup_Arithmetic;
+    switch (op) {
+        ALL_BINARY_OPS(X)
     }
-    assert(0 && "Invalid binary operation");
-    return NULL;
+#undef X
 }
 
-int binary_op_is_arithmetic(NodeBinary binary) {
-    switch (binary.op) {
-        case Binary_Operation_Add:
-        case Binary_Operation_Sub:
-        case Binary_Operation_Mul:
-        case Binary_Operation_Div:
-        case Binary_Operation_Mod:
-            return 1;
-        default:
-            return 0;
+int binary_op_is_relational(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group == BinaryOpGroup_Relational;
+    switch (op) {
+        ALL_BINARY_OPS(X)
     }
-}
-
-int binary_op_is_comparison(NodeBinary binary) {
-    switch (binary.op) {
-        case Binary_Operation_Lt:
-        case Binary_Operation_Le:
-        case Binary_Operation_Eq:
-        case Binary_Operation_Ne:
-        case Binary_Operation_Ge:
-        case Binary_Operation_Gt:
-            return 1;
-        default:
-            return 0;
-    }
+#undef X
 }
 
 
@@ -209,7 +216,6 @@ typedef struct {
 } ParseRule;
 
 ParseRule rules[] = {
-        [Token_Invalid]             = { NULL,         NULL,         Precedence_None},
         [Token_Number]              = { number,       NULL,         Precedence_None},
         [Token_Real]                = { real,         NULL,         Precedence_None},
         [Token_String]              = { string,       NULL,         Precedence_None},
@@ -222,10 +228,10 @@ ParseRule rules[] = {
         [Token_Less]                = { NULL,         binary,       Precedence_Comparison},
         [Token_Less_Equal]          = { NULL,         binary,       Precedence_Comparison},
         [Token_Equal_Equal]         = { NULL,         binary,       Precedence_Equality},
-        [Token_Exclamation_Equal]   = { NULL,         binary,       Precedence_Equality},
+        [Token_Bang_Equal]   = { NULL,         binary,       Precedence_Equality},
         [Token_Greater_Equal]       = { NULL,         binary,       Precedence_Comparison},
         [Token_Greater]             = { NULL,         binary,       Precedence_Comparison},
-        [Token_Exclamation]         = { NULL,         NULL,         Precedence_None},
+        [Token_Bang]         = { NULL,         NULL,         Precedence_None},
         [Token_Equal]               = { NULL,         NULL,         Precedence_None},
         [Token_If]                  = { NULL,         NULL,         Precedence_None},
         [Token_Open_Paren]          = { group,        call,         Precedence_Call},
@@ -268,7 +274,7 @@ static Node* number(Parser* parser) {
     i64 value = strtoll(repr, NULL, 10);
     advance(parser);
 
-    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = Literal_Integer, .value.integer = value };
+    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = LiteralType_Integer, .value.integer = value };
     return add_node(parser, (Node) { .literal = literal });
 }
 
@@ -280,7 +286,7 @@ static Node* real(Parser* parser) {
     f64 value = strtod(repr, NULL);
     advance(parser);
 
-    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = Literal_Real, .value.real = value };
+    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = LiteralType_Real, .value.real = value };
     return add_node(parser, (Node) { .literal = literal });
 }
 
@@ -291,7 +297,7 @@ static Node* string(Parser* parser) {
     const char* repr = repr_of_current(parser);
     advance(parser);
 
-    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = Literal_String, .value.string = repr };
+    NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = LiteralType_String, .value.string = repr };
     return add_node(parser, (Node) { .literal = literal });
 }
 
@@ -308,42 +314,46 @@ static Node* identifier(Parser* parser) {
 
 static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
-    assert(token_is_binary_operator(token) && "Expected binary operator");
+    assert((
+        token_group(token) == TokenGroup_Binary_Arithmetic_Operator ||
+        token_group(token) == TokenGroup_Binary_Comparison_Operator
+    ) && "Expected binary operator");
+    TokenIndex start = parser->token_index;
 
     NodeBinary binary;
     switch (token) {
         case Token_Plus: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Add };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Add };
         } break;
         case Token_Minus: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Sub };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Sub };
         } break;
         case Token_Asterisk: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Mul };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Mul };
         } break;
         case Token_Slash: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Div };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Div };
         } break;
         case Token_Percent: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Mod };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Mod };
         } break;
         case Token_Less: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Lt };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Lt };
         } break;
         case Token_Less_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Le };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Le };
         } break;
         case Token_Equal_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Eq };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Eq };
         } break;
-        case Token_Exclamation_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Ne };
+        case Token_Bang_Equal: {
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Ne };
         } break;
         case Token_Greater_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Ge };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Ge };
         } break;
         case Token_Greater: {
-            binary = (NodeBinary) { { NodeKind_Binary, left->base.start, 0 }, .left=left, .right=0, .op=Binary_Operation_Gt };
+            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Gt };
         } break;
         default: {
             assert(0 && "Invalid binary operator");
@@ -572,6 +582,7 @@ static Node* if_stmt(Parser* parser) {
     return add_node(parser, (Node) { .if_stmt = if_stmt });
 }
 
+
 static Node* while_stmt(Parser* parser) {
     assert(current(parser) == Token_While && "Expected 'while' token");
     TokenIndex start = parser->token_index;
@@ -593,8 +604,13 @@ static Node* while_stmt(Parser* parser) {
         else_block = block(parser);
     }
 
-    NodeWhile while_stmt = { { NodeKind_While, start, then_block->base.end }, .condition = condition, .then_block = (NodeBlock*) then_block, .else_block = (NodeBlock*) else_block };
-    return add_node(parser, (Node) { .while_stmt = while_stmt });
+    NodeWhile while_stmt = {
+        node_base_while_stmt(start, then_block->base.end),
+        .condition = condition,
+        .then_block = (NodeBlock*) then_block,
+        .else_block = (NodeBlock*) else_block
+    };
+    return add_node(parser, node_while_stmt(while_stmt));
 }
 
 
@@ -611,17 +627,16 @@ static Node* statement(Parser* parser) {
         case Token_Less:
         case Token_Less_Equal:
         case Token_Equal_Equal:
-        case Token_Exclamation_Equal:
+        case Token_Bang_Equal:
         case Token_Greater_Equal:
         case Token_Greater:
-        case Token_Exclamation:
+        case Token_Bang:
         case Token_Colon_Equal:
         case Token_Close_Paren:
         case Token_Close_Brace:
         case Token_Colon:
         case Token_Comma:
-        case Token_Else:
-        case Token_Invalid: {
+        case Token_Else: {
             fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
             int start = (int) parser->tokens.source_offsets[parser->token_index];
             point_to_error(parser->tokens.source, start, start+1);

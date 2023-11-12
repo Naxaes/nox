@@ -90,7 +90,7 @@ TEST(LexerTest, BinaryOperators) {
     test_tokenization(STR("<"), { Token_Less }, { "<" });
     test_tokenization(STR("<="), { Token_Less_Equal }, { "<=" });
     test_tokenization(STR("=="), { Token_Equal_Equal }, { "==" });
-    test_tokenization(STR("!="), { Token_Exclamation_Equal }, { "!=" });
+    test_tokenization(STR("!="), { Token_Bang_Equal }, { "!=" });
     test_tokenization(STR(">="), { Token_Greater_Equal }, { ">=" });
     test_tokenization(STR(">"), { Token_Greater }, { ">" });
 }

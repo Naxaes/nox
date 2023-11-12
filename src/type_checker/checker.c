@@ -6,20 +6,6 @@
 #include <stdlib.h>
 
 
-/* ---------------------------- TYPES -------------------------------- */
-static const char* type_repr_of(TypeId type) {
-    switch (type) {
-        case Literal_Boolean: return "bool";
-        case Literal_Integer: return "int";
-        case Literal_Real:    return "real";
-        case Literal_String:  return "string";
-        default:
-            assert(0 && "Not implemented");
-    }
-    assert(0 && "Invalid type id");
-    return NULL;
-}
-
 void typed_ast_free(TypedAst ast) {
     free(ast.nodes);
     Block* block = ast.blocks;
@@ -90,7 +76,7 @@ static void report_undeclared_identifier(Checker* checker, const char* name, Nod
 }
 
 static void report_binary_op_mismatch(Checker* checker, NodeBinary binary, TypeId left, TypeId right) {
-    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary), type_repr_of(left), type_repr_of(right));
+    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary.op), literal_type_repr(left), literal_type_repr(right));
     int start = (int) checker->ast.tokens.source_offsets[binary.base.start];
     int end   = (int) checker->ast.tokens.source_offsets[binary.base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, binary.base.end);
@@ -99,7 +85,7 @@ static void report_binary_op_mismatch(Checker* checker, NodeBinary binary, TypeI
 }
 
 static void report_type_expectation(Checker* checker, const char* prefix, Node* node, TypeId expected, TypeId got) {
-    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->ast.tokens.name), prefix, type_repr_of(expected), type_repr_of(got));
+    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->ast.tokens.name), prefix, literal_type_repr(expected), literal_type_repr(got));
     int start = (int) checker->ast.tokens.source_offsets[node->base.start];
     int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
@@ -141,8 +127,8 @@ static TypeId type_check_binary(Checker* checker, NodeBinary binary) {
         return 0;
     }
 
-    if (binary_op_is_comparison(binary))
-        return Literal_Boolean;
+    if (binary_op_is_relational(binary.op))
+        return LiteralType_Boolean;
     else
         return left;
 }
@@ -200,8 +186,8 @@ static TypeId type_check_if_stmt(Checker* checker, NodeIf if_stmt) {
     if (condition == 0)
         return 0;
 
-    if (condition != Literal_Boolean) {
-        report_type_expectation(checker, "Condition of 'if' statement must be a boolean", (Node*) if_stmt.condition, Literal_Boolean, condition);
+    if (condition != LiteralType_Boolean) {
+        report_type_expectation(checker, "Condition of 'if' statement must be a boolean", (Node*) if_stmt.condition, LiteralType_Boolean, condition);
         return 0;
     }
 
@@ -219,8 +205,8 @@ static TypeId type_check_while_stmt(Checker* checker, NodeWhile while_stmt) {
     if (condition == 0)
         return 0;
 
-    if (condition != Literal_Boolean) {
-        report_type_expectation(checker, "Condition of 'while' statement must be a boolean", (Node*) while_stmt.condition, Literal_Boolean, condition);
+    if (condition != LiteralType_Boolean) {
+        report_type_expectation(checker, "Condition of 'while' statement must be a boolean", (Node*) while_stmt.condition, LiteralType_Boolean, condition);
         return 0;
     }
 
@@ -250,7 +236,6 @@ static TypeId type_check_expression(Checker* checker, Node* node) {
 }
 
 static TypeId type_check_statement(Checker* checker, Node* node) {
-    assert(node_is_statement(node) && "Not a statement");
     switch (node->kind) {
         case NodeKind_Literal:
         case NodeKind_Identifier:

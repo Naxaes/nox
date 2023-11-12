@@ -83,13 +83,13 @@ void generate_for_statement(Generator* generator, TypedAst ast, Node* node);
 
 Register generate_for_literal(Generator* generator, TypedAst ast, NodeLiteral literal) {
     switch (literal.type) {
-        case Literal_Boolean:
+        case LiteralType_Boolean:
             return mov_imm64(generator, generator->current_register++, literal.value.integer != 0);
-        case Literal_Integer:
+        case LiteralType_Integer:
             return mov_imm64(generator, generator->current_register++, literal.value.integer);
-        case Literal_Real:
+        case LiteralType_Real:
             assert(0 && "not implemented");
-        case Literal_String:
+        case LiteralType_String:
             return mov_imm64(generator, generator->current_register++, (u64) literal.value.string);
         default:
             assert(0 && "Invalid literal type");
@@ -115,21 +115,21 @@ Register generate_for_binary(Generator* generator, TypedAst ast, NodeBinary bina
     Register source = generate_for_expression(generator, ast, binary.right);
     generator->current_register--;  // Consume the expression register
     static InstructionType binary_op[] = {
-            [Binary_Operation_Add] = Instruction_Add,
-            [Binary_Operation_Sub] = Instruction_Sub,
-            [Binary_Operation_Mul] = Instruction_Mul,
-            [Binary_Operation_Div] = Instruction_Div,
-            [Binary_Operation_Mod] = Instruction_Mod,
-            [Binary_Operation_Lt]  = Instruction_Lt,
-            [Binary_Operation_Le]  = Instruction_Le,
-            [Binary_Operation_Eq]  = Instruction_Eq,
-            [Binary_Operation_Ne]  = Instruction_Ne,
-            [Binary_Operation_Ge]  = Instruction_Ge,
-            [Binary_Operation_Gt]  = Instruction_Gt,
+            [BinaryOp_Add] = Instruction_Add,
+            [BinaryOp_Sub] = Instruction_Sub,
+            [BinaryOp_Mul] = Instruction_Mul,
+            [BinaryOp_Div] = Instruction_Div,
+            [BinaryOp_Mod] = Instruction_Mod,
+            [BinaryOp_Lt]  = Instruction_Lt,
+            [BinaryOp_Le]  = Instruction_Le,
+            [BinaryOp_Eq]  = Instruction_Eq,
+            [BinaryOp_Ne]  = Instruction_Ne,
+            [BinaryOp_Ge]  = Instruction_Ge,
+            [BinaryOp_Gt]  = Instruction_Gt,
     };
-    assert(binary.op <= Binary_Operation_Gt && "Invalid binary operation");
+    assert(binary.op <= BinaryOp_Gt && "Invalid binary operation");
     InstructionType inst = binary_op[binary.op];
-    assert(inst != Instruction_Invalid && "Invalid binary operation");
+    assert(inst != 0 && "Invalid binary operation");
     return bin_op(generator, inst, dest, source);
 }
 
@@ -244,7 +244,6 @@ void generate_for_while_stmt(Generator* generator, TypedAst ast, NodeWhile while
 }
 
 void generate_for_statement(Generator* generator, TypedAst ast, Node* node) {
-    assert(node_is_statement(node) && "Invalid node kind");
     switch (node->kind) {
         case NodeKind_Literal:
         case NodeKind_Identifier:

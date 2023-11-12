@@ -224,42 +224,21 @@ static Token token_from_string(Str string) {
 
 const char* lexer_repr_of(TokenArray tokens, TokenIndex id) {
     Token token = tokens.tokens[id];
-    switch (token) {
-        case Token_Invalid:           return "<Invalid>";
-        case Token_Plus:              return "+";
-        case Token_Asterisk:          return "*";
-        case Token_Equal:             return "=";
-        case Token_Eof:               return "<EOF>";
-        case Token_Minus:             return "-";
-        case Token_Slash:             return "/";
-        case Token_Percent:           return "%";
-        case Token_Less:              return "<";
-        case Token_Less_Equal:        return "<=";
-        case Token_Equal_Equal:       return "==";
-        case Token_Exclamation_Equal: return "!=";
-        case Token_Greater_Equal:     return ">=";
-        case Token_Greater:           return ">";
-        case Token_Exclamation:       return "!";
-        case Token_Open_Paren:        return "(";
-        case Token_Close_Paren:       return ")";
-        case Token_Open_Brace:        return "{";
-        case Token_Close_Brace:       return "}";
-        case Token_Comma:             return ",";
-        case Token_Colon:             return ":";
-        case Token_Colon_Equal:       return ":=";
-        case Token_If:                return "if";
-        case Token_Else:              return "else";
-        case Token_While:             return "while";
-        case Token_Fun:               return "fun";
+    const char* repr = token_repr(token);
+    if (repr != 0)
+        return repr;
 
+    switch (token) {
         case Token_Number:
         case Token_Real:
         case Token_String:
         case Token_Identifier: {
             size_t offset = tokens.identifiers[id];
-            const char* repr = (const char*) &tokens.data_pool[offset];
+            repr = (const char*) &tokens.data_pool[offset];
             return repr;
         }
+        default:
+            assert(0 && "Unreachable");
     }
 }
 
@@ -270,7 +249,7 @@ TokenArray lexer_lex(Str name, Str source) {
         .count  = 0,
         .tokens = (Token*) malloc(1024 * sizeof(Token)),
         .identifiers = (DataPoolIndex*) malloc(1024 * sizeof(DataPoolIndex)),
-        .indices = (size_t*) malloc(1024 * sizeof(size_t)),
+        .indices = (SourceIndex*) malloc(1024 * sizeof(SourceIndex)),
         .intern_pool = intern_pool_make()
     };
 
@@ -329,9 +308,9 @@ TokenArray lexer_lex(Str name, Str source) {
             } break;
             case '!': {
                 if (*(current+1) == '=')
-                    current += add_double_token(&lexer, current, Token_Exclamation_Equal);
+                    current += add_double_token(&lexer, current, Token_Bang_Equal);
                 else
-                    current += add_single_token(&lexer, current, Token_Exclamation);
+                    current += add_single_token(&lexer, current, Token_Bang);
             } break;
             case '<': {
                 if (*(current+1) == '=')
