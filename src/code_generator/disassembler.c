@@ -71,7 +71,13 @@ void disassemble_instruction(Instruction instruction, FILE* output) {
             fprintf(output, "%-10s [%04llx]%-4s r%-9llx", "JmpZero", instruction.jmp.label, " ", instruction.jmp.src);
         } break;
         case Instruction_Print: {
-            fprintf(output, "%-10s l%-9llx %-10s", "Print", instruction.call.label, " ");
+            fprintf(output, "%-10s %-10s %-10s", "Print", " ", " ");
+        } break;
+        case Instruction_Call: {
+            fprintf(output, "%-10s [%04llx]%-4s %-10s", "Call", instruction.call.label, " ", " ");
+        } break;
+        case Instruction_Ret: {
+            fprintf(output, "%-10s %-10s %-10s", "Ret", " ", " ");
         } break;
         case Instruction_Exit: {
             fprintf(output, "%-10s %-10s %-10s", "Exit", " ", " ");
@@ -87,7 +93,7 @@ void disassemble(Bytecode code, FILE* output) {
 
     for (size_t i = 0; i < code.size; i++) {
         Instruction instruction = code.instructions[i];
-        if (instruction.type == Instruction_Jmp || instruction.type == Instruction_JmpZero) {
+        if (instruction.type == Instruction_Jmp || instruction.type == Instruction_JmpZero || instruction.type == Instruction_Call) {
             u64 start = (i < instruction.jmp.label) ? i : instruction.jmp.label;
             u64 stop  = (i < instruction.jmp.label) ? instruction.jmp.label : i;
             Label label = { .start = start, .stop = stop, .source = i, .target = instruction.jmp.label };

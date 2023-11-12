@@ -5,6 +5,7 @@
 #include <assert.h>
 
 
+
 i64 interpret(Bytecode code) {
     Interpreter interpreter = {
         .ip = 0,
@@ -15,6 +16,9 @@ i64 interpret(Bytecode code) {
         .instructions = code.instructions,
         .instructions_size = code.size,
     };
+
+    u64* sp = interpreter.stack;
+
 
     while (interpreter.ip < interpreter.instructions_size) {
         Instruction instruction = interpreter.instructions[interpreter.ip++];
@@ -107,6 +111,13 @@ i64 interpret(Bytecode code) {
             case Instruction_Print: {
                 Register src = instruction.call.label;
                 printf("%s\n", (const char*) interpreter.registers[src]);
+            } break;
+            case Instruction_Call: {
+                *sp++ = interpreter.ip;
+                interpreter.ip = instruction.call.label;
+            } break;
+            case Instruction_Ret: {
+                interpreter.ip = *--sp;
             } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];
