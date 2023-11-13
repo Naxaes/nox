@@ -4,7 +4,7 @@
 #include "parser/parser.h"
 
 
-typedef u32 TypeId;
+typedef u64 TypeId;
 typedef struct {
     TypeId type;
     Node*  decl;

@@ -218,6 +218,7 @@ static Token token_from_string(Str string) {
     if (str_equals(string, STR("else")))   return Token_Else;
     if (str_equals(string, STR("fun")))    return Token_Fun;
     if (str_equals(string, STR("while")))  return Token_While;
+    if (str_equals(string, STR("return"))) return Token_Return;
 
     return Token_Identifier;
 }

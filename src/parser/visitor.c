@@ -3,63 +3,74 @@
 #include "visitor.h"
 
 
-void* visit(Visitor* visitor, Node* node) {
+void* visit(void* visitor, Node* node) {
+    Visitor* impl = (Visitor*) visitor;
     switch (node->kind) {
         case NodeKind_Literal:
-            if (visitor->visit_literal)
-                return visitor->visit_literal(visitor, (NodeLiteral*) node);
+            if (impl->visit_literal)
+                return impl->visit_literal(impl, (NodeLiteral*) node);
             else
-                return walk_literal(visitor, (NodeLiteral*) node);
+                return walk_literal(impl, (NodeLiteral*) node);
         case NodeKind_Identifier:
-            if (visitor->visit_identifier)
-                return visitor->visit_identifier(visitor, (NodeIdentifier*) node);
+            if (impl->visit_identifier)
+                return impl->visit_identifier(impl, (NodeIdentifier*) node);
             else
-                return walk_identifier(visitor, (NodeIdentifier*) node);
+                return walk_identifier(impl, (NodeIdentifier*) node);
         case NodeKind_Binary:
-            if (visitor->visit_binary)
-                return visitor->visit_binary(visitor, (NodeBinary*) node);
+            if (impl->visit_binary)
+                return impl->visit_binary(impl, (NodeBinary*) node);
             else
-                return walk_binary(visitor, (NodeBinary*) node);
+                return walk_binary(impl, (NodeBinary*) node);
         case NodeKind_Call:
-            if (visitor->visit_call)
-                return visitor->visit_call(visitor, (NodeCall*) node);
+            if (impl->visit_call)
+                return impl->visit_call(impl, (NodeCall*) node);
             else
-                return walk_call(visitor, (NodeCall*) node);
+                return walk_call(impl, (NodeCall*) node);
+        case NodeKind_Type:
+            if (impl->visit_type)
+                return impl->visit_type(impl, (NodeType*) node);
+            else
+                return walk_type(impl, (NodeType*) node);
         case NodeKind_Assign:
-            if (visitor->visit_assign)
-                return visitor->visit_assign(visitor, (NodeAssign*) node);
+            if (impl->visit_assign)
+                return impl->visit_assign(impl, (NodeAssign*) node);
             else
-                return walk_assign(visitor, (NodeAssign*) node);
+                return walk_assign(impl, (NodeAssign*) node);
         case NodeKind_VarDecl:
-            if (visitor->visit_var_decl)
-                return visitor->visit_var_decl(visitor, (NodeVarDecl*) node);
+            if (impl->visit_var_decl)
+                return impl->visit_var_decl(impl, (NodeVarDecl*) node);
             else
-                return walk_var_decl(visitor, (NodeVarDecl*) node);
+                return walk_var_decl(impl, (NodeVarDecl*) node);
         case NodeKind_Block:
-            if (visitor->visit_block)
-                return visitor->visit_block(visitor, (NodeBlock*) node);
+            if (impl->visit_block)
+                return impl->visit_block(impl, (NodeBlock*) node);
             else
-                return walk_block(visitor, (NodeBlock*) node);
+                return walk_block(impl, (NodeBlock*) node);
         case NodeKind_FunParam:
-            if (visitor->visit_fun_param)
-                return visitor->visit_fun_param(visitor, (NodeFunParam*) node);
+            if (impl->visit_fun_param)
+                return impl->visit_fun_param(impl, (NodeFunParam*) node);
             else
-                return walk_fun_param(visitor, (NodeFunParam*) node);
+                return walk_fun_param(impl, (NodeFunParam*) node);
         case NodeKind_FunDecl:
-            if (visitor->visit_fun_decl)
-                return visitor->visit_fun_decl(visitor, (NodeFunDecl*) node);
+            if (impl->visit_fun_decl)
+                return impl->visit_fun_decl(impl, (NodeFunDecl*) node);
             else
-                return walk_fun_decl(visitor, (NodeFunDecl*) node);
+                return walk_fun_decl(impl, (NodeFunDecl*) node);
+        case NodeKind_Return:
+            if (impl->visit_return_stmt)
+                return impl->visit_return_stmt(impl, (NodeReturn*) node);
+            else
+                return walk_return_stmt(impl, (NodeReturn*) node);
         case NodeKind_If:
-            if (visitor->visit_if_stmt)
-                return visitor->visit_if_stmt(visitor, (NodeIf*) node);
+            if (impl->visit_if_stmt)
+                return impl->visit_if_stmt(impl, (NodeIf*) node);
             else
-                return walk_if_stmt(visitor, (NodeIf*) node);
+                return walk_if_stmt(impl, (NodeIf*) node);
         case NodeKind_While:
-            if (visitor->visit_while_stmt)
-                return visitor->visit_while_stmt(visitor, (NodeWhile*) node);
+            if (impl->visit_while_stmt)
+                return impl->visit_while_stmt(impl, (NodeWhile*) node);
             else
-                return walk_while_stmt(visitor, (NodeWhile*) node);
+                return walk_while_stmt(impl, (NodeWhile*) node);
     }
 }
 
@@ -77,6 +88,8 @@ void* walk(Visitor* visitor, Node* node) {
         case NodeKind_Call:
             walk_view(visitor, (Node**)node->call.args);
             return NULL;
+        case NodeKind_Type:
+            return NULL;
         case NodeKind_Assign:
             visit(visitor, node->assign.expression);
             return NULL;
@@ -92,6 +105,9 @@ void* walk(Visitor* visitor, Node* node) {
         case NodeKind_FunDecl:
             walk_view(visitor, (Node**)node->fun_decl.params);
             visit(visitor, (Node*) node->fun_decl.block);
+            return NULL;
+        case NodeKind_Return:
+            visit(visitor, node->return_stmt.expression);
             return NULL;
         case NodeKind_If:
             visit(visitor, node->if_stmt.condition);
@@ -139,7 +155,13 @@ void* walk_binary(Visitor* visitor, NodeBinary* node) {
 }
 
 void* walk_call(Visitor* visitor, NodeCall* node) {
-    walk_view(visitor, (Node*)node->args);
+    walk_view(visitor, (Node**)node->args);
+    return NULL;
+}
+
+void* walk_type(Visitor* visitor, NodeType* node) {
+    (void) visitor;
+    (void) node;
     return NULL;
 }
 
@@ -166,6 +188,11 @@ void* walk_fun_param(Visitor* visitor, NodeFunParam* node) {
 void* walk_fun_decl(Visitor* visitor, NodeFunDecl* node) {
     walk_view(visitor, (Node**)node->params);
     visit(visitor, (Node*)node->block);
+    return NULL;
+}
+
+void* walk_return_stmt(Visitor* visitor, NodeReturn* node) {
+    visit(visitor, (Node*)node->expression);
     return NULL;
 }
 

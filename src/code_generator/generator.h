@@ -43,6 +43,8 @@ typedef enum {
     Instruction_Load,
     Instruction_Jmp,
     Instruction_JmpZero,
+    Instruction_Push,
+    Instruction_Pop,
     Instruction_Print,
     Instruction_Call,
     Instruction_Ret,
@@ -53,24 +55,24 @@ typedef struct {
     InstructionType type;
     union {
         struct {
-            u64 dst;
-            u64 val;
+            i64 dst;
+            i64 val;
         } imm;
         struct {
-            u64 dst;
-            u64 src;
+            i64 dst;
+            i64 src;
         } reg;
         struct {
-            u64 label;
-            u64 src;
+            i64 label;
+            i64 src;
         } jmp;
         struct {
-            u64 label;
+            i64 label;
         } call;
     };
 } Instruction;
 
-typedef u32 Register;
+typedef i64 Register;
 
 typedef struct {
     Instruction* instructions;

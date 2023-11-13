@@ -95,6 +95,7 @@ int binary_op_is_relational(BinaryOp op) {
 typedef struct {
     TokenArray tokens;
     TokenIndex token_index;
+
     Node*      nodes;
     NodeId     node_count;
     Node**     views;
@@ -119,7 +120,8 @@ UntypedAst parser_to_ast(Parser* parser, Node* start) {
         parser->tokens,
         parser->nodes,
         start,
-        parser->views
+        parser->views,
+        parser->block_count
     };
 }
 
@@ -230,10 +232,10 @@ ParseRule rules[] = {
         [Token_Less]                = { NULL,         binary,       Precedence_Comparison},
         [Token_Less_Equal]          = { NULL,         binary,       Precedence_Comparison},
         [Token_Equal_Equal]         = { NULL,         binary,       Precedence_Equality},
-        [Token_Bang_Equal]   = { NULL,         binary,       Precedence_Equality},
+        [Token_Bang_Equal]          = { NULL,         binary,       Precedence_Equality},
         [Token_Greater_Equal]       = { NULL,         binary,       Precedence_Comparison},
         [Token_Greater]             = { NULL,         binary,       Precedence_Comparison},
-        [Token_Bang]         = { NULL,         NULL,         Precedence_None},
+        [Token_Bang]                = { NULL,         NULL,         Precedence_None},
         [Token_Equal]               = { NULL,         NULL,         Precedence_None},
         [Token_If]                  = { NULL,         NULL,         Precedence_None},
         [Token_Open_Paren]          = { group,        call,         Precedence_Call},
@@ -310,8 +312,11 @@ static Node* identifier(Parser* parser) {
     const char* repr = repr_of_current(parser);
     advance(parser);
 
-    NodeIdentifier ident = { { NodeKind_Identifier, start, start }, .name = repr };
-    return add_node(parser, (Node) { .identifier = ident });
+    NodeIdentifier ident = {
+        node_base_identifier(start, start),
+        .name = repr,
+    };
+    return add_node(parser, node_identifier(ident));
 }
 
 static Node* binary(Parser* parser, Node* left) {
@@ -325,37 +330,37 @@ static Node* binary(Parser* parser, Node* left) {
     NodeBinary binary;
     switch (token) {
         case Token_Plus: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Add };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Add };
         } break;
         case Token_Minus: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Sub };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Sub };
         } break;
         case Token_Asterisk: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Mul };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Mul };
         } break;
         case Token_Slash: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Div };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Div };
         } break;
         case Token_Percent: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Mod };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Mod };
         } break;
         case Token_Less: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Lt };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Lt };
         } break;
         case Token_Less_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Le };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Le };
         } break;
         case Token_Equal_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Eq };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Eq };
         } break;
         case Token_Bang_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Ne };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Ne };
         } break;
         case Token_Greater_Equal: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Ge };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Ge };
         } break;
         case Token_Greater: {
-            binary = (NodeBinary) { { NodeKind_Binary, start, 0 }, .left=left, .right=0, .op=BinaryOp_Gt };
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Gt };
         } break;
         default: {
             assert(0 && "Invalid binary operator");
@@ -399,10 +404,16 @@ static Node* call(Parser* parser, Node* left) {
         advance(parser);
     }
 
+    size_t count = parser->stack_count - snapshot;
     Node** expressions = stack_restore(parser, snapshot);
 
-    NodeCall call = { { NodeKind_Call, start, node == NULL ? start : node->base.end }, .name = left->identifier.name, .args = expressions };
-    return add_node(parser, (Node) { .call = call });
+    NodeCall call = {
+        node_base_call(start, node == NULL ? start : node->base.end),
+        .name = left->identifier.name,
+        .count = (i32) count,
+        .args = expressions
+    };
+    return add_node(parser, node_call(call));
 }
 
 
@@ -432,6 +443,33 @@ static Node* group(Parser* parser) {
     return expr;
 }
 
+static Node* parse_type(Parser* parser) {
+    assert(current(parser) == Token_Identifier && "Expected identifier token");
+    TokenIndex start = parser->token_index;
+
+    const char* repr = repr_of_current(parser);
+    advance(parser);
+
+    const char* literal_type = NULL;
+    if (strcmp(repr, "int") == 0) {
+        literal_type = (const char*)(size_t)(LiteralType_Integer);
+    } else if (strcmp(repr, "real") == 0) {
+        literal_type = (const char*)(size_t)(LiteralType_Real);
+    } else if (strcmp(repr, "str") == 0) {
+        literal_type = (const char*)(size_t)(LiteralType_String);
+    } else if (strcmp(repr, "void") == 0) {
+        literal_type = (const char*)(size_t)(LiteralType_Void);
+    } else {
+        literal_type = repr;
+    }
+
+    NodeType type = {
+        node_base_type(start, start),
+        .name = literal_type,
+    };
+    return add_node(parser, node_type(type));
+
+}
 
 static Node* assignment(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
@@ -448,8 +486,12 @@ static Node* assignment(Parser* parser) {
     advance(parser);
     Node* expr = expression(parser);
 
-    NodeAssign assign = { { NodeKind_Assign, start, expr->base.end }, .name = repr, .expression = expr };
-    return add_node(parser, (Node) { .assign = assign });
+    NodeAssign assign = {
+        node_base_assign(start, expr->base.end),
+        .name = repr,
+        .expression = expr
+    };
+    return add_node(parser, node_assign(assign));
 }
 
 static Node* var_decl(Parser* parser) {
@@ -469,14 +511,27 @@ static Node* var_decl(Parser* parser) {
     if (expr == NULL)
         return NULL;
 
-    NodeVarDecl var_decl = { { NodeKind_VarDecl, start, expr->base.end }, .name = repr, .expression = expr };
-    return add_node(parser, (Node) { .var_decl = var_decl });
+    NodeVarDecl var_decl = {
+        node_base_var_decl(start, expr->base.end),
+        .name = repr,
+        .expression = expr
+    };
+    return add_node(parser, node_var_decl(var_decl));
 }
 
 static Node* block(Parser* parser) {
     assert(current(parser) == Token_Open_Brace && "Expected '{' token");
     TokenIndex start = parser->token_index;
     advance(parser);
+
+    NodeBlock* block = (NodeBlock*) add_node(parser, node_block((NodeBlock) {
+            node_base_block(start, 0),
+            .id = (i32) ++parser->block_count,
+            .parent = parser->current_block->id,
+            .nodes = NULL
+    }));
+    NodeBlock* previous = parser->current_block;
+    parser->current_block = block;
 
     size_t snapshot = stack_snapshot(parser);
     Node* node = NULL;
@@ -492,15 +547,16 @@ static Node* block(Parser* parser) {
         }
         advance(parser);
     }
+    size_t count = parser->stack_count - snapshot;
     Node** statements = stack_restore(parser, snapshot);
 
-    NodeBlock block = {
-        node_base_block(start, node->base.end),
-        .id = (i32) ++parser->block_count,
-        .parent = parser->current_block->id,
-        .nodes = statements
-    };
-    return add_node(parser, node_block(block));
+    TokenIndex stop = parser->token_index;
+    block->base = node_base_block(start, stop);
+    block->nodes = statements;
+    block->count = (i32) count;
+
+    parser->current_block = previous;
+    return (Node*) block;
 }
 
 static NodeFunParam* fun_param(Parser* parser) {
@@ -520,21 +576,7 @@ static NodeFunParam* fun_param(Parser* parser) {
         fprintf(stderr, "Expected type after ':'\n");
         return NULL;
     }
-    const char* type_repr = repr_of_current(parser);
-    LiteralType type = LiteralType_Integer;
-    if (strcmp(type_repr, "int") == 0) {
-        type = LiteralType_Integer;
-    } else if (strcmp(type_repr, "real") == 0) {
-        type = LiteralType_Real;
-    } else if (strcmp(type_repr, "str") == 0) {
-        type = LiteralType_String;
-    } else {
-        fprintf(stderr, "Expected type after ':'\n");
-        return NULL;
-    }
-    advance(parser);
-
-
+    Node* type = parse_type(parser);
 
     NodeFunParam fun_param = {
         node_base_fun_param(start, start),
@@ -544,7 +586,7 @@ static NodeFunParam* fun_param(Parser* parser) {
     return (NodeFunParam*) add_node(parser, node_fun_param(fun_param));
 }
 
-static NodeFunParam** fun_params(Parser* parser) {
+static NodeFunParam** fun_params(Parser* parser, size_t* count) {
     size_t snapshot = stack_snapshot(parser);
     NodeFunParam* param = NULL;
     {
@@ -563,6 +605,7 @@ static NodeFunParam** fun_params(Parser* parser) {
         }
         advance(parser);
     }
+    *count = parser->stack_count - snapshot;
     return (NodeFunParam**) stack_restore(parser, snapshot);
 }
 
@@ -584,7 +627,13 @@ static NodeFunDecl* fun_decl(Parser* parser) {
     }
     advance(parser);
 
-    NodeFunParam** params = fun_params(parser);
+    size_t count;
+    NodeFunParam** params = fun_params(parser, &count);
+
+    Node* type = NULL;
+    if (current(parser) != Token_Open_Brace) {
+        type = parse_type(parser);
+    }
 
     Node* body = block(parser);
     if (body == NULL)
@@ -594,9 +643,28 @@ static NodeFunDecl* fun_decl(Parser* parser) {
         node_base_fun_decl(start, body->base.end),
         .name = repr,
         .params = params,
+        .return_type = type,
+        .count = (i32) count,
         .block = (NodeBlock*) body
     };
     return (NodeFunDecl*) add_node(parser, node_fun_decl(fun_decl));
+}
+
+static Node* return_stmt(Parser* parser) {
+    assert(current(parser) == Token_Return && "Expected 'return' token");
+    TokenIndex start = parser->token_index;
+    advance(parser);
+
+    // TODO(ted): Make a void/unit expression.
+    Node* expr = expression(parser);
+    if (expr == NULL)
+        return NULL;
+
+    NodeReturn return_stmt = {
+        node_base_return_stmt(start, strlen("return")),
+        .expression = expr
+    };
+    return add_node(parser, node_return_stmt(return_stmt));
 }
 
 static Node* if_stmt(Parser* parser) {
@@ -716,6 +784,9 @@ static Node* statement(Parser* parser) {
         case Token_Fun: {
             return (Node*) fun_decl(parser);
         } break;
+        case Token_Return: {
+            return (Node*) return_stmt(parser);
+        }
         case Token_Eof: {
             return NULL;
         }
@@ -744,7 +815,9 @@ UntypedAst parse(TokenArray tokens) {
         node_base_block(0, 0),
         .id = 0,
         .parent = -1,
-        .nodes = NULL
+        .nodes = NULL,
+        .decls = NULL,
+        .decl_count = 0
     }));
 
 
@@ -759,11 +832,13 @@ UntypedAst parse(TokenArray tokens) {
             }
            parser.stack[parser.stack_count++] = node;
         } else {
+            size_t count = parser.stack_count - snapshot;
             Node** statements = stack_restore(&parser, snapshot);
 
             TokenIndex stop = parser.token_index;
             parser.current_block->base = node_base_block(first, stop);
             parser.current_block->nodes = statements;
+            parser.current_block->count = (i32) count;
             return parser_to_ast(&parser, (Node*)parser.current_block);
         }
     }
@@ -772,7 +847,7 @@ UntypedAst parse(TokenArray tokens) {
     
     error:;
     parser_free(&parser);
-    return (UntypedAst) { tokens, NULL, NULL, NULL };
+    return (UntypedAst) { tokens, NULL, NULL, NULL, 0 };
 }
 
 

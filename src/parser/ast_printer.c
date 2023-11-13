@@ -106,6 +106,14 @@ static void visit_call(AstPrinter* printer, const NodeCall* node) {
     printer_rst();
 }
 
+static void visit_type(AstPrinter* printer, const NodeType* node) {
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* path = printer->ast->tokens.name.data;
+
+    const char* repr = (node->name < (const char*)10) ? literal_type_repr((LiteralType)(size_t)node->name) : lexer_repr_of(printer->ast->tokens, node->base.start);
+    fprintf(printer->output, "Type: id=%d, name='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, path, location.row, location.column);
+}
+
 static void visit_var_decl(AstPrinter* printer, const NodeVarDecl* node) {
     Location location = location_of_node(printer->ast, (Node*)node);
     const char* path = printer->ast->tokens.name.data;
@@ -188,6 +196,21 @@ static void visit_fun_decl(AstPrinter* printer, const NodeFunDecl* node) {
     printer_rst();
 }
 
+static void visit_return_stmt(AstPrinter* printer, const NodeReturn* node) {
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* repr = lexer_repr_of(printer->ast->tokens, node->base.start);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "Return: id=%d, repr='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, path, location.row, location.column);
+
+    printer->indentation += 1;
+    print_indentation(1, "expr");
+    visit((Visitor*) printer, node->expression);
+    printer->indentation -= 1;
+
+    printer_rst();
+}
+
 static void visit_if_stmt(AstPrinter* printer, const NodeIf* node) {
     Location location = location_of_node(printer->ast, (Node*)node);
     const char* path = printer->ast->tokens.name.data;
@@ -227,20 +250,14 @@ static void visit_while_stmt(AstPrinter* printer, const NodeWhile* node) {
 }
 
 
+
+
 void ast_print(UntypedAst ast, FILE* output) {
     AstPrinter printer = {
         .visitor = {
-            .visit_literal = (void*) visit_literal,
-            .visit_identifier = (void*) visit_identifier,
-            .visit_binary = (void*) visit_binary,
-            .visit_call = (void*) visit_call,
-            .visit_assign = (void*) visit_assign,
-            .visit_var_decl = (void*) visit_var_decl,
-            .visit_block = (void*) visit_block,
-            .visit_fun_param = (void*) visit_fun_param,
-            .visit_fun_decl = (void*) visit_fun_decl,
-            .visit_if_stmt = (void*) visit_if_stmt,
-            .visit_while_stmt = (void*) visit_while_stmt,
+#define X(upper, lower, flags, body) .visit_##lower = (Visit##upper##Fn) visit_##lower,
+            ALL_NODES(X)
+#undef X
         },
         .ast = &ast,
         .output = output,

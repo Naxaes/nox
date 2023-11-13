@@ -23,7 +23,7 @@ i64 interpret(Bytecode code) {
 
     while (interpreter.ip < interpreter.instructions_size) {
         Instruction instruction = interpreter.instructions[interpreter.ip];
-//        fprintf(stdout, "[%-4zu]: ", interpreter.ip);
+//        fprintf(stdout, "[%04zx]: ", interpreter.ip);
 //        disassemble_instruction(instruction, stdout);
 //        fprintf(stdout, "\n");
         interpreter.ip++;
@@ -124,6 +124,14 @@ i64 interpret(Bytecode code) {
             } break;
             case Instruction_Ret: {
                 interpreter.ip = *--sp;
+            } break;
+            case Instruction_Push: {
+                Register src = instruction.reg.src;
+                *sp++ = interpreter.registers[src];
+            } break;
+            case Instruction_Pop: {
+                Register dst = instruction.reg.dst;
+                interpreter.registers[dst] = *--sp;
             } break;
             case Instruction_Exit: {
                 i64 value = (i64) interpreter.registers[0];

@@ -3,6 +3,11 @@ fun temp(a: str, b: str, c: str) {
     x := "Hello"
     print(x)
     y := "World"
+    /*{
+        z := "Block"
+        print(z)
+    }*/
+    // x := "Variable 'x' already declared"
     print(c)
     print(y)
     print(b)
@@ -15,3 +20,9 @@ fun bla(x: str) {
 bla("Hello")
 temp("aaaa", "bbbb", "cccc")
 
+fun finish() int {
+    print("Finish")
+    return 10
+}
+variable := finish()
+finish() + 3 + variable

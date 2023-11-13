@@ -83,7 +83,11 @@ typedef enum {
     )                                                                   \
     X(Call, call, NodeFlag_Is_Expression,                               \
         const char* name;                                               \
+        i32    count;                                                   \
         Node** args;                                                    \
+    )                                                                   \
+    X(Type, type, NodeFlag_None,                                        \
+        const char* name;                                               \
     )                                                                   \
     X(Assign, assign, NodeFlag_Is_Statement,                            \
         const char* name;                                               \
@@ -96,18 +100,25 @@ typedef enum {
     X(Block, block, NodeFlag_Is_Statement,                              \
         i32    id;                                                      \
         i32    parent;                                                  \
+        i32    count;                                                   \
         Node** nodes;                                                   \
+        i32    decl_count;                                              \
+        Node** decls;                                                   \
     )                                                                   \
     X(FunParam, fun_param, NodeFlag_Is_Statement,                       \
         const char* name;                                               \
-        u32 type;                                                       \
+        Node* type;                                                     \
         Node* expression;                                               \
     )                                                                   \
     X(FunDecl, fun_decl, NodeFlag_Is_Statement,                         \
         const char* name;                                               \
         NodeFunParam** params;                                          \
-        u32 return_type;                                                \
+        i32 count;                                                      \
+        Node* return_type;                                              \
         NodeBlock* block;                                               \
+    )                                                                   \
+    X(Return, return_stmt, NodeFlag_Is_Statement,                       \
+        Node* expression;                                               \
     )                                                                   \
     X(If, if_stmt, NodeFlag_Is_Statement,                               \
         Node* condition;                                                \
@@ -168,6 +179,8 @@ typedef struct {
     Node*  nodes;
     Node*  start;
     Node** views;
+
+    size_t block_count;
 } UntypedAst;
 
 UntypedAst parse(TokenArray tokens);
