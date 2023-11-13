@@ -34,6 +34,7 @@ typedef enum {
     X(Else,           else,          "else",    Keyword)                            \
     X(While,          while,         "while",   Keyword)                            \
     X(Fun,            fun,           "fun",     Keyword)                            \
+    X(Return,         return,        "return",  Keyword)                            \
     X(Open_Paren,     open_paren,    "(",       None)                               \
     X(Close_Paren,    close_paren,   ")",       None)                               \
     X(Open_Brace,     open_brace,    "{",       None)                               \
