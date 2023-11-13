@@ -1,5 +1,6 @@
 #undef assert
 #include <signal.h>
+#include <stdlib.h>
 
 #define assert(expr) \
     do {                 \
