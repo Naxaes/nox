@@ -10,6 +10,7 @@ typedef enum {
     REPL,
     RUN,
     SIM,
+    TRANS,
     HELP,
 } RunMode;
 
@@ -18,7 +19,7 @@ typedef struct {
     const char* working_file;
     const char* input_file;
     RunMode mode;
-    int is_quiet;
+    int verbose;
     int take_time;
 } ArgCommands;
 

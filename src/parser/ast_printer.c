@@ -4,7 +4,7 @@
 
 typedef struct {
     Visitor visitor;
-    UntypedAst* ast;
+    GrammarTree* ast;
     FILE* output;
     const char* msg;
     int   indentation;
@@ -43,11 +43,11 @@ static void print_indentation_(AstPrinter* printer, const int is_last) {
 #define printer_rst() printer->msg = ""
 
 
-static inline Location location_of_node(UntypedAst* ast, Node* node) {
+static inline Location location_of_node(GrammarTree* ast, Node* node) {
     return location_of(ast->tokens.source.data, ast->tokens.source_offsets[node->base.start]);
 }
 
-static inline NodeId id_of(UntypedAst* ast, Node* node) {
+static inline NodeId id_of(GrammarTree* ast, Node* node) {
     return (NodeId) (node - ast->nodes);
 }
 
@@ -170,6 +170,26 @@ static void visit_fun_param(AstPrinter* printer, const NodeFunParam* node) {
     fprintf(printer->output, "FunParam: id=%d, name='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, path, location.row, location.column);
 }
 
+static void visit_fun_body(AstPrinter* printer, const NodeFunBody* node) {
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "FunBody: id=%d, parent='%d', block_id='%d' decls='%d' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), node->parent, node->id, node->decls, path, location.row, location.column);
+
+    printer->indentation += 1;
+    Node* stmt = NULL;
+    int i = 0;
+    if (node->nodes != NULL) {
+        while ((stmt = *(node->nodes + i)) != NULL) {
+            print_indentation(node->nodes[i+1] == NULL, "stmt%d", i);
+            visit((Visitor*) printer, stmt);
+            i += 1;
+        }
+    }
+    printer->indentation -= 1;
+    printer_rst();
+}
+
 static void visit_fun_decl(AstPrinter* printer, const NodeFunDecl* node) {
     Location location = location_of_node(printer->ast, (Node*)node);
     const char* repr = lexer_repr_of(printer->ast->tokens, node->base.start);
@@ -190,7 +210,7 @@ static void visit_fun_decl(AstPrinter* printer, const NodeFunDecl* node) {
     }
 
     print_indentation(1, "body");
-    visit_block(printer, node->block);
+    visit_fun_body(printer, node->body);
     printer->indentation -= 1;
 
     printer_rst();
@@ -250,9 +270,40 @@ static void visit_while_stmt(AstPrinter* printer, const NodeWhile* node) {
 }
 
 
+static void visit_module(AstPrinter* printer, const NodeModule* node) {
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "Module: id=%d @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), path, location.row, location.column);
+
+    printer->indentation += 1;
+    Node* stmt = NULL;
+
+    int i = 0;
+    if (node->decls != NULL) {
+        while ((stmt = *(node->decls + i)) != NULL) {
+            print_indentation(node->decls[i+1] == NULL, "stmt%d", i);
+            visit((Visitor*) printer, stmt);
+            i += 1;
+        }
+    }
+
+    i = 0;
+    if (node->stmts != NULL) {
+        while ((stmt = *(node->stmts + i)) != NULL) {
+            print_indentation(node->stmts[i+1] == NULL, "stmt%d", i);
+            visit((Visitor*) printer, stmt);
+            i += 1;
+        }
+    }
+
+    printer->indentation -= 1;
+    printer_rst();
+}
 
 
-void ast_print(UntypedAst ast, FILE* output) {
+
+void ast_print(GrammarTree ast, FILE* output) {
     AstPrinter printer = {
         .visitor = {
 #define X(upper, lower, flags, body) .visit_##lower = (Visit##upper##Fn) visit_##lower,

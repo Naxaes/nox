@@ -29,6 +29,7 @@ typedef enum {
     Instruction_MovImm64,
     Instruction_Mov,
     Instruction_Add,
+    Instruction_Add_Imm,
     Instruction_Sub,
     Instruction_Mul,
     Instruction_Div,

@@ -1,0 +1,19 @@
+
+
+fun main() {
+    a := 10
+    b := 20
+
+    x := 0
+    while x < 10 {
+        if a < b {
+            print("a is less than b")
+        } else {
+            print("a is greater than b")
+        }
+        a = a + 2
+        x = x + 1
+    }
+}
+
+main()
