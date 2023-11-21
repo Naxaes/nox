@@ -2,8 +2,9 @@
 
 #include "location.h"
 #include "str.h"
+#include "logger.h"
 
 #include <stdio.h>
 
 
-void point_to_error(Str source, int index, int size);
+void point_to_error(Logger* logger, Str source, int index, int size);

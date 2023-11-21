@@ -75,6 +75,7 @@ static inline int is_identifier_continue(char c) {
 
 /* ---------------------------- LEXER IMPL -------------------------------- */
 typedef struct {
+    Logger* logger;
     Str source;
 
     size_t          count;
@@ -139,7 +140,7 @@ static Str parse_number(const char* source, Token* token) {
     return (Str) { (size_t)(end-start), start };
 }
 
-static Str parse_string(const char* source, int* is_valid) {
+static Str parse_string(Lexer* lexer, const char* source, int* is_valid) {
     assert(*source == '"' && "Expected a quote");
     // Skip the first quote.
     const char* start = source + 1;
@@ -157,9 +158,9 @@ static Str parse_string(const char* source, int* is_valid) {
         *is_valid = 1;
         return (Str) { (size_t)(end-start), start };
     } else {
-        fprintf(stderr, "[Error] (Lexer) Unterminated string literal.\n");
+        error(lexer->logger, "Unterminated string literal.\n");
         size_t length = (size_t)(end-start);
-        point_to_error((Str) { length, start }, 0, length);
+        point_to_error(lexer->logger, (Str) { length, start }, 0, length);
         *is_valid = 0;
         return STR_EMPTY;
     }
@@ -172,20 +173,20 @@ static const char* parse_line_comment(const char* source) {
     return source;
 }
 
-static const char* parse_block_comment(const char* source) {
+static const char* parse_block_comment(Lexer* lexer, const char* source) {
     assert(*source == '/' && *(source+1) == '*' && "Expected a block comment");
     source += 2;
 
     while (*source != '\0' && !(*source == '*' && *(source+1) == '/')) {
         if (*source == '/' && *(source+1) == '*') {
-            source = parse_block_comment(source);
+            source = parse_block_comment(lexer, source);
         } else {
             ++source;
         }
     }
     if (*source == '\0') {
-        fprintf(stderr, "[Error] (Lexer) Unterminated block comment.\n");
-        point_to_error((Str) { 2, source-2 }, 0, 2);
+        error(lexer->logger, "Unterminated block comment.\n");
+        point_to_error(lexer->logger, (Str) { 2, source-2 }, 0, 2);
     } else {
         source += 2;
     }
@@ -244,8 +245,9 @@ const char* lexer_repr_of(TokenArray tokens, TokenIndex id) {
 }
 
 
-TokenArray lexer_lex(Str name, Str source) {
+TokenArray lexer_lex(Str name, Str source, Logger* logger) {
     Lexer lexer =  {
+        .logger = logger,
         .source = source,
         .count  = 0,
         .tokens = (Token*) malloc(1024 * sizeof(Token)),
@@ -281,7 +283,7 @@ TokenArray lexer_lex(Str name, Str source) {
                     current = parse_line_comment(current);
                     goto retry;
                 } else if (*(current+1) == '*') {
-                    current = parse_block_comment(current);
+                    current = parse_block_comment(&lexer, current);
                 } else {
                     current += add_single_token(&lexer, current, Token_Slash);
                 }
@@ -336,7 +338,7 @@ TokenArray lexer_lex(Str name, Str source) {
             } break;
             case '"': {
                 int is_valid = 0;
-                Str string = parse_string(current, &is_valid);
+                Str string = parse_string(&lexer, current, &is_valid);
                 if (!is_valid) {
                     lexer_free(&lexer);
                     return (TokenArray) { name, source, NULL, NULL, NULL, 0, NULL, 0 };
@@ -356,11 +358,11 @@ TokenArray lexer_lex(Str name, Str source) {
                 } else {
                     int width = multi_byte_count(*current);
                     if (width == 0) width = 1;
-                    fprintf(stderr, "[Error] (Lexer) " STR_FMT "\n  Unknown character: '" STR_FMT "'\n", STR_ARG(name), width, current);
+                    error(lexer.logger, STR_FMT "\n  Unknown character: '" STR_FMT "'\n", STR_ARG(name), width, current);
 
                     // Assume all characters only take up one column in the terminal for now.
                     int start = (int)(current - source.data);
-                    point_to_error(source, start, start+width);
+                    point_to_error(lexer.logger, source, start, start+width);
                     lexer_free(&lexer);
                     return (TokenArray) { name, source, NULL, NULL, NULL, 0, NULL, 0 };
                 }

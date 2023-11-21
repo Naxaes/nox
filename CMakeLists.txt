@@ -34,6 +34,7 @@ set(SOURCES
     src/code_generator/generator.c
     src/code_generator/disassembler.c
     src/interpreter/interpreter.c
+    src/logger.c
     src/file.c
     src/str.c
     src/args.c
@@ -44,7 +45,7 @@ set(SOURCES
     src/transpiler/c_transpiler.c
     src/parser/visitor.c
     src/parser/ast_printer.c
-        src/parser/node.c
+    src/parser/node.c
 )
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)
