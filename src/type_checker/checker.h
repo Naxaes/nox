@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "logger.h"
 #include "parser/parser.h"
 
 
@@ -27,6 +28,6 @@ typedef struct {
     Block*  block;
 } TypedAst;
 
-TypedAst type_check(GrammarTree ast);
+TypedAst type_check(GrammarTree ast, Logger* logger);
 
 void typed_ast_free(TypedAst ast);

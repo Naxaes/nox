@@ -2,6 +2,7 @@
 #include "types.h"
 #include "str.h"
 #include "token.h"
+#include "logger.h"
 
 typedef u32 TokenIndex;
 typedef u32 DataPoolIndex;
@@ -26,7 +27,7 @@ typedef struct {
 
 
 /// Lex the source to a token array.
-TokenArray lexer_lex(Str name, Str source);
+TokenArray lexer_lex(Str name, Str source, Logger* logger);
 
 /// Get the textual representation of a token.
 const char* lexer_repr_of(TokenArray tokens, TokenIndex id);

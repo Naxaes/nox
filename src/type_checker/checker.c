@@ -22,6 +22,7 @@ void typed_ast_free(TypedAst ast) {
 /* ---------------------------- CHECKER IMPL -------------------------------- */
 typedef struct {
     Visitor visitor;
+    Logger* logger;
     GrammarTree ast;
 
     Block* blocks;
@@ -81,30 +82,30 @@ static Local* find_local(Checker* checker, const char* name) {
 }
 
 static void report_undeclared_identifier(Checker* checker, const char* name, const Node* node) {
-    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->ast.tokens.name), name);
+    error(checker->logger, STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->ast.tokens.name), name);
     int start = (int) checker->ast.tokens.source_offsets[node->base.start];
     int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
 
-    point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+    point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
 }
 
 static void report_binary_op_mismatch(Checker* checker, const NodeBinary* binary, TypeId left, TypeId right) {
-    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary->op), literal_type_repr(left), literal_type_repr(right));
+    error(checker->logger, STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary->op), literal_type_repr(left), literal_type_repr(right));
     int start = (int) checker->ast.tokens.source_offsets[binary->base.start];
     int end   = (int) checker->ast.tokens.source_offsets[binary->base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, binary->base.end);
 
-    point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+    point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
 }
 
 static void report_type_expectation(Checker* checker, const char* prefix, const Node* node, TypeId expected, TypeId got) {
-    fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->ast.tokens.name), prefix, literal_type_repr(expected), literal_type_repr(got));
+    error(checker->logger, STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->ast.tokens.name), prefix, literal_type_repr(expected), literal_type_repr(got));
     int start = (int) checker->ast.tokens.source_offsets[node->base.start];
     int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
     const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
 
-    point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+    point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
 }
 
 
@@ -154,23 +155,23 @@ static TypeId type_check_call(Checker* checker, const NodeCall* call) {
     }
 
     if (local->decl->kind != NodeKind_FunDecl) {
-        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    '%s' is not a function\n", STR_ARG(checker->ast.tokens.name), call->name);
+        error(checker->logger, STR_FMT "\n    '%s' is not a function\n", STR_ARG(checker->ast.tokens.name), call->name);
         int start = (int) checker->ast.tokens.source_offsets[call->base.start];
         int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
         const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
 
-        point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+        point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
         return 0;
     }
 
     NodeFunDecl* fun_decl = &local->decl->fun_decl;
     if (fun_decl->param_count != call->count) {
-        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Function '%s' requires %d arguments, got %d\n", STR_ARG(checker->ast.tokens.name), call->name, fun_decl->param_count, call->count);
+        error(checker->logger, STR_FMT "\n    Function '%s' requires %d arguments, got %d\n", STR_ARG(checker->ast.tokens.name), call->name, fun_decl->param_count, call->count);
         int start = (int) checker->ast.tokens.source_offsets[call->base.start];
         int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
         const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
 
-        point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+        point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
         return 0;
     }
 
@@ -195,12 +196,12 @@ static TypeId type_check_call(Checker* checker, const NodeCall* call) {
 static TypeId type_check_var_decl(Checker* checker, const NodeVarDecl* var_decl) {
     Local* local = find_local(checker, var_decl->name);
     if (local) {
-        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Variable '%s' already declared\n", STR_ARG(checker->ast.tokens.name), var_decl->name);
+        error(checker->logger, STR_FMT "\n    Variable '%s' already declared\n", STR_ARG(checker->ast.tokens.name), var_decl->name);
         int start = (int) checker->ast.tokens.source_offsets[var_decl->base.start];
         int end   = (int) checker->ast.tokens.source_offsets[var_decl->base.end];
         const char* repr = lexer_repr_of(checker->ast.tokens, var_decl->base.end);
 
-        point_to_error(checker->ast.tokens.source, start, end + (int)strlen(repr));
+        point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
         return 0;
     }
 
@@ -272,11 +273,11 @@ static TypeId type_check_fun_body(Checker* checker, const NodeFunBody* node) {
 static TypeId type_check_fun_decl(Checker* checker, const NodeFunDecl* fun_decl) {
     Local* local = find_local(checker, fun_decl->name);
     if (local != NULL) {
-        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Function '%s' already declared\n", STR_ARG(checker->ast.tokens.name), fun_decl->name);
+        error(checker->logger, STR_FMT "\n    Function '%s' already declared\n", STR_ARG(checker->ast.tokens.name), fun_decl->name);
         int start = (int) checker->ast.tokens.source_offsets[fun_decl->base.start];
         int end   = (int) checker->ast.tokens.source_offsets[fun_decl->body->base.start];
 
-        point_to_error(checker->ast.tokens.source, start, end);
+        point_to_error(checker->logger, checker->ast.tokens.source, start, end);
         return 0;
     }
 
@@ -306,11 +307,11 @@ static TypeId type_check_fun_decl(Checker* checker, const NodeFunDecl* fun_decl)
 
 static TypeId type_check_return_stmt(Checker* checker, const NodeReturn* return_stmt) {
     if (checker->current_function == NULL) {
-        fprintf(stderr, "[Error] (Checker) " STR_FMT "\n    Return statement outside of function\n", STR_ARG(checker->ast.tokens.name));
+        error(checker->logger, STR_FMT "\n    Return statement outside of function\n", STR_ARG(checker->ast.tokens.name));
         int start = (int) checker->ast.tokens.source_offsets[return_stmt->base.start];
         int end   = (int) checker->ast.tokens.source_offsets[return_stmt->base.end];
 
-        point_to_error(checker->ast.tokens.source, start, end);
+        point_to_error(checker->logger, checker->ast.tokens.source, start, end);
         return 0;
     }
 
@@ -386,7 +387,7 @@ static TypeId type_check_module(Checker* checker, const NodeModule* node) {
 }
 
 
-TypedAst type_check(GrammarTree ast) {
+TypedAst type_check(GrammarTree ast, Logger* logger) {
     Node* node = ast.start;
 
     Visitor visitor = {
@@ -397,6 +398,7 @@ TypedAst type_check(GrammarTree ast) {
 
     Checker checker = {
         .visitor = visitor,
+        .logger = logger,
         .ast = ast,
         .blocks = (Block*) alloc((ast.block_count + 1) * sizeof(Block)),
         .block_count = 0,

@@ -12,6 +12,7 @@
 
 /* ---------------------------- PARSER IMPL -------------------------------- */
 typedef struct {
+    Logger* logger;
     const TokenArray tokens;
     TokenIndex token_index;
 
@@ -342,7 +343,7 @@ static Node* call(Parser* parser, Node* left) {
         if (current(parser) != Token_Close_Paren) {
             fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after argument list, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
             int begin = (int) parser->tokens.source_offsets[parser->token_index];
-            point_to_error(parser->tokens.source, begin, (int)start+1);
+            point_to_error(parser->logger, parser->tokens.source, begin, (int)start+1);
             return NULL;
         }
 
@@ -380,7 +381,7 @@ static Node* group(Parser* parser) {
     if (token != Token_Close_Paren) {
         fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
         int start = (int) parser->tokens.source_offsets[parser->token_index];
-        point_to_error(parser->tokens.source, start, start+1);
+        point_to_error(parser->logger, parser->tokens.source, start, start+1);
         return NULL;
     }
     advance(parser);
@@ -751,7 +752,7 @@ static Node* statement(Parser* parser) {
         case Token_Else: {
             fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Invalid token: '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
             int start = (int) parser->tokens.source_offsets[parser->token_index];
-            point_to_error(parser->tokens.source, start, start+1);
+            point_to_error(parser->logger, parser->tokens.source, start, start+1);
             return NULL;
         } break;
         case Token_Identifier: {
@@ -791,8 +792,9 @@ static Node* statement(Parser* parser) {
 }
 
 
-GrammarTree parse(const TokenArray tokens) {
+GrammarTree parse(TokenArray tokens, Logger* logger) {
     Parser parser = {
+        .logger = logger,
         .tokens = tokens,
         .token_index = 0,
         .stack = (Node**) malloc(1024 * sizeof(Node*)),

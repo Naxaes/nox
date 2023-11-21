@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "node.h"
+#include "logger.h"
 #include "lexer/lexer.h"
 
 
@@ -15,6 +16,6 @@ typedef struct {
     size_t block_count;
 } GrammarTree;
 
-GrammarTree parse(const TokenArray tokens);
+GrammarTree parse(TokenArray tokens, Logger* logger);
 
 void grammar_tree_free(GrammarTree ast);

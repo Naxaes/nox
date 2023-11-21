@@ -119,11 +119,6 @@ int parse_sim(int argc, const char* const argv[], ArgCommands* commands) {
 
 
 ArgCommands parse_args(int argc, const char* const argv[]) {
-    if (argc == 1) {
-        printf("%s", USAGE);
-        exit(EXIT_SUCCESS);
-    }
-
     ArgCommands commands = { .working_file=argv[0], .input_file=0, .mode=NO_RUN_MODE, .verbose=0, .take_time=0 };
     argv++; argc--;
     for (int i = 0; i < argc; ++i) {
