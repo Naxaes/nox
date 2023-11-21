@@ -143,3 +143,60 @@ fn main(monster: &Monster) {
 
 
 
+
+# Prologue
+push bp
+mov bp, sp
+add sp, N
+store 0, r2
+store 1, r3
+...
+store N, r2+N
+
+
+# Call
+push r2
+mov r2, X
+push r3
+mov r3, Y
+...
+push r2+N
+mov r2+N, Z
+
+call foo
+
+pop r2+N
+...
+pop r3
+pop r2
+
+
+# Epilogue
+mov sp, bp
+pop bp
+
+
+
+
+
+
+
+Functions, types and compile-time constant variables should not need to be lexically scoped.
+
+
+fun main() {
+    a := add(10, 20)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

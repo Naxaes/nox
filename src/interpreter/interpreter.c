@@ -1,32 +1,53 @@
 #include "interpreter.h"
 #include "code_generator/disassembler.h"
+#include "memory.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
 
+#define STACK_MAX_SIZE 1024
+#define REG_MAX_SIZE 32
 
 i64 interpret(Bytecode code) {
     Interpreter interpreter = {
         .ip = 0,
-        .stack = malloc(sizeof(u64) * 1024),
+        .stack = alloc(sizeof(u64) * STACK_MAX_SIZE),
         .stack_size = 1024,
-        .registers = malloc(sizeof(u64) * 8),
-        .registers_size = 8,
+        .registers = alloc(sizeof(u64) * REG_MAX_SIZE),
         .instructions = code.instructions,
         .instructions_size = code.size,
     };
 
-    u64* sp = interpreter.stack;
-
-
     while (interpreter.ip < interpreter.instructions_size) {
         Instruction instruction = interpreter.instructions[interpreter.ip];
-//        fprintf(stdout, "[%04zx]: ", interpreter.ip);
-//        disassemble_instruction(instruction, stdout);
-//        fprintf(stdout, "\n");
+
+
+        /*
+        fprintf(stdout, "[%04zx]: ", interpreter.ip);
+        disassemble_instruction(instruction, stdout);
+
+        fprintf(stdout, " | bp=%llx, sp=%llx, ", interpreter.registers[0], interpreter.registers[1]);
+        for (size_t i = 2; i < 8; ++i) {
+            if (interpreter.registers[i] > 0xFFFFFF)
+                fprintf(stdout, "'%s', ", (const char*)interpreter.registers[i]);
+            else
+                fprintf(stdout, "%lld, ", interpreter.registers[i]);
+        }
+        fprintf(stdout, " | ");
+        for (size_t i = 0; i < 8; ++i) {
+            if (interpreter.stack[i] > 0xFFFFFF)
+                fprintf(stdout, "'%s', ", (const char*)interpreter.stack[i]);
+            else
+                fprintf(stdout, "%lld, ", interpreter.stack[i]);
+        }
+        fprintf(stdout, "\n");
+         */
+
         interpreter.ip++;
+        u64* bp = &interpreter.registers[0];
+        u64* sp = &interpreter.registers[1];
 
         switch (instruction.type) {
             case Instruction_MovImm64: {
@@ -43,6 +64,11 @@ i64 interpret(Bytecode code) {
                 Register dst = instruction.reg.dst;
                 Register src = instruction.reg.src;
                 interpreter.registers[dst] += interpreter.registers[src];
+            } break;
+            case Instruction_Add_Imm: {
+                Register dst = instruction.imm.dst;
+                Register val = instruction.imm.val;
+                interpreter.registers[dst] += val;
             } break;
             case Instruction_Sub: {
                 Register dst = instruction.reg.dst;
@@ -97,12 +123,13 @@ i64 interpret(Bytecode code) {
             case Instruction_Store: {
                 Register dst = instruction.reg.dst;
                 Register src = instruction.reg.src;
-                interpreter.registers[dst] = interpreter.registers[src];
+                interpreter.stack[*bp + dst] = interpreter.registers[src];
             } break;
             case Instruction_Load: {
                 Register dst = instruction.reg.dst;
                 Register src = instruction.reg.src;
-                interpreter.registers[dst] = interpreter.registers[src];
+
+                interpreter.registers[dst] = interpreter.stack[*bp + src];
             } break;
             case Instruction_Jmp: {
                 interpreter.ip = instruction.jmp.label;
@@ -115,26 +142,30 @@ i64 interpret(Bytecode code) {
                 }
             } break;
             case Instruction_Print: {
-                Register src = instruction.call.label;
-                printf("%s\n", (const char*) interpreter.registers[src]);
+                u64 value = interpreter.stack[*(sp)-1];
+                printf("%s\n", (const char*) value);
             } break;
             case Instruction_Call: {
-                *sp++ = interpreter.ip;
+                interpreter.stack[*sp] = interpreter.ip;
+                (*sp)++;
                 interpreter.ip = instruction.call.label;
             } break;
             case Instruction_Ret: {
-                interpreter.ip = *--sp;
+                interpreter.ip = interpreter.stack[--(*sp)];
             } break;
             case Instruction_Push: {
                 Register src = instruction.reg.src;
-                *sp++ = interpreter.registers[src];
+                assert(*sp < STACK_MAX_SIZE && "Stack overflow");
+                interpreter.stack[(*sp)++] = interpreter.registers[src];
             } break;
             case Instruction_Pop: {
                 Register dst = instruction.reg.dst;
-                interpreter.registers[dst] = *--sp;
+                assert(*sp > 0 && "Stack underflow");
+                interpreter.registers[dst] = interpreter.stack[--(*sp)];
             } break;
             case Instruction_Exit: {
-                i64 value = (i64) interpreter.registers[0];
+                assert(interpreter.registers[0] == 0 && interpreter.registers[1] == 0 && "Cleanup stack before exiting");
+                i64 value = (i64) interpreter.registers[2];
                 return value;
             } break;
             default: {
