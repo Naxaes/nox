@@ -5,6 +5,6 @@
 #include <stdio.h>
 
 
-void ast_print(GrammarTree ast, FILE* out);
+void ast_print(UntypedAst ast, FILE* out);
 
 

@@ -1,140 +1,28 @@
-fun block() {
-    // prologue
-    // mov bp, sp
-
-    // mov r0, "a"
-    // store 0, r0
-    a := "a"
-    {
-        // mov r1, "b"
-        // store 1, r1
-        b := "b"
-        {
-            // mov r2, "c"
-            // store 2, r1
-            c := "c"
-
-            // load r0, 0
-            // push r0
-            // print
-            print(a)
-
-            // load r0, 1
-            // push r0
-            // print
-            print(b)
-
-            // load r0, 2
-            // push r0
-            // print
-            print(c)
-        }
-        // load r0, 0
-        // push r0
-        // print
-        print(a)
-
-        // load r0, 1
-        // push r0
-        // print r0
-        print(b)
-    }
-    // load r0, 0
-    // print
-    print(a)
-
-    // epilogue
-    // mov sp, bp
-    // ret
-}
-block()
-
 fun temp(a: str, b: str, c: str) {
-    // prologue
-    // mov bp, sp
-    // add sp, 2
-
-    // load r0, -3
-    // push r0
-    // print
     print(a)
-
-    // mov r1, "Hello"
-    // store 0, r1
     x := "Hello"
-
-    // load r0, 0
-    // push r0
-    // print
     print(x)
-
-    // mov r2, "World"
-    // store 1, r2
     y := "World"
-
-    // load r0, -1
-    // push r0
-    // print
+    /*{
+        z := "Block"
+        print(z)
+    }*/
+    // x := "Variable 'x' already declared"
     print(c)
-
-    // load r0, 1
-    // push r0
-    // print
     print(y)
-
-    // load r0, -2
-    // push r0
-    // print
     print(b)
-
-    // epilogue
-    // mov sp, bp
-    // ret
 }
-// call block
-
-// mov r0, "AAAA"
-// push r0
-// mov r1, "BBBB"
-// push r1
-// mov r2, "CCCC"
-// push r2
-// call temp
 temp("AAAA", "BBBB", "CCCC")
 
-fun finish(fin: int) int {
-    // prologue
-    // mov bp, sp
-    // add sp, 0
+fun bla(x: str) {
+    print(x)
+}
+bla("Hello")
+temp("aaaa", "bbbb", "cccc")
 
-    // mov r0, "Finish"
-    // push r0
-    // call print
+fun finish() int {
     print("Finish")
-
-    if fin == 0 {
-        return 0
-    }
-
-    // epilogue
-    // mov r0, 10
-    // push r0
-    // mov sp, bp
-    // ret
     return 10
 }
-
-// call finish
-// pop r0
-// store 0, r0
-variable := finish(1)
-
-// call finish
-// pop r0
-// mov r1, 3
-// add r0, r1
-// load r1, 0
-// add r0, r1
-finish(2) + 3 + variable
-
-// exit
+variable := finish()
+finish() + 3 + variable

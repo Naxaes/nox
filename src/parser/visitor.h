@@ -26,7 +26,6 @@ void* walk_type(Visitor* visitor, NodeType* node);
 void* walk_assign(Visitor* visitor, NodeAssign* node);
 void* walk_var_decl(Visitor* visitor, NodeVarDecl* node);
 void* walk_block(Visitor* visitor, NodeBlock* node);
-void* walk_fun_body(Visitor* visitor, NodeFunBody* node);
 void* walk_fun_param(Visitor* visitor, NodeFunParam* node);
 void* walk_fun_decl(Visitor* visitor, NodeFunDecl* node);
 void* walk_return_stmt(Visitor* visitor, NodeReturn* node);

@@ -20,7 +20,7 @@ int LLVMFuzzerTestOneInput(const u8* data, size_t size) {
         return 0;
     }
 
-    GrammarTree grammar_tree = parse(array);
+    UntypedAst grammar_tree = parse(array);
     if (grammar_tree.nodes == NULL) {
         return 0;
     }

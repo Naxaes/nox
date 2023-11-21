@@ -4,7 +4,7 @@
 
 static inline u32 aarch64_mov_imm(u32 dest, u64 value) {
     if (value >= 1uLL << 13) {
-        fprintf(stderr, "[WARN]: mov only supports 13-bit immediate\n");
+        fprintf(stderr, "[ERROR]: mov only supports 13-bit immediate\n");
         return 0;
     }
 

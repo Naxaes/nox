@@ -23,40 +23,6 @@ typedef struct {
 } InterpreterResult;
 
 
-int c_transpile(Str name, Str source, int verbose) {
-    TokenArray array = lexer_lex(name, source);
-    if (array.tokens == NULL) {
-        fprintf(stderr, "Failed to lex source\n");
-        return -1;
-    }
-
-    GrammarTree grammar_tree = parse(array);
-    if (grammar_tree.nodes == NULL) {
-        fprintf(stderr, "Failed to parse source\n");
-        return -1;
-    }
-
-    if (verbose)
-        ast_print(grammar_tree, stdout);
-
-    TypedAst typed_tree = type_check(grammar_tree);
-    if (typed_tree.nodes == NULL) {
-        fprintf(stderr, "Failed to type check source\n");
-        return -1;
-    }
-
-    Bytecode code = generate_code(typed_tree);
-    if (code.instructions == NULL) {
-        fprintf(stderr, "Failed to generate code\n");
-        return -1;
-    }
-
-    compile_c(code);
-
-    return 0;
-}
-
-
 InterpreterResult run(Str name, Str source, int verbose) {
     TokenArray array = lexer_lex(name, source);
     if (array.tokens == NULL) {
@@ -64,14 +30,13 @@ InterpreterResult run(Str name, Str source, int verbose) {
         return (InterpreterResult) { 0, 1 };
     }
 
-    GrammarTree grammar_tree = parse(array);
+    UntypedAst grammar_tree = parse(array);
     if (grammar_tree.nodes == NULL) {
         fprintf(stderr, "Failed to parse source\n");
         return (InterpreterResult) { 0, 1 };
     }
 
-    if (verbose)
-        ast_print(grammar_tree, stdout);
+    ast_print(grammar_tree, stdout);
 
     TypedAst typed_tree = type_check(grammar_tree);
     if (typed_tree.nodes == NULL) {
@@ -85,11 +50,9 @@ InterpreterResult run(Str name, Str source, int verbose) {
         return (InterpreterResult) { 0, 1 };
     }
 
-    if (verbose) {
-        fprintf(stdout, "\nBytecode:\n");
-        disassemble(code, stdout);
-        printf("\n");
-    }
+    fprintf(stdout, "\nBytecode:\n");
+    disassemble(code, stdout);
+    printf("\n");
 
     JitFunction jitted_function = jit_compile(code, verbose);
     if (jitted_function) {
@@ -101,6 +64,7 @@ InterpreterResult run(Str name, Str source, int verbose) {
 
     i64 result = interpret(code);
 
+    compile_c(code);
     return (InterpreterResult) { result, 0 };
 }
 
@@ -163,28 +127,21 @@ int main(int argc, const char* argv[]) {
                 fprintf(stderr, "Failed to read file\n");
                 return 1;
             }
-            if (commands.verbose)
+            if (!commands.is_quiet)
                 printf("[INFO]: %s\n%s\n", commands.input_file, source.data);
-            InterpreterResult result = run(str_from_c_str(commands.input_file), source, commands.verbose);
+            InterpreterResult result = run(str_from_c_str(commands.input_file), source, !commands.is_quiet);
             if (result.error) {
                 fprintf(stderr, "Failed to run source\n");
                 return 1;
             } else {
                 printf("[INFO]: Result: %lld\n", result.result);
+//                printf("[INFO]: Result: %s\n",  (char*)result.result);
             }
             break;
         } case SIM: {
             assert(0 && "Not implemented");
             break;
-        } case TRANS: {
-            Str source = read_file(commands.input_file);
-            if (str_is_empty(source)) {
-                fprintf(stderr, "Failed to read file\n");
-                return 1;
-            }
-            c_transpile(str_from_c_str(commands.input_file), source, commands.verbose);
-        } break;
-        case HELP: {
+        } case HELP: {
             printf("%s", USAGE);
         }
     }

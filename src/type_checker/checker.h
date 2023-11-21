@@ -11,10 +11,9 @@ typedef struct {
 } Local;
 
 typedef struct {
-    int     parent;
-    i32     parent_count;
+    size_t  parent;
     Local*  locals;
-    i64     count;
+    size_t  count;
 } Block;
 
 typedef struct {
@@ -27,6 +26,6 @@ typedef struct {
     Block*  block;
 } TypedAst;
 
-TypedAst type_check(GrammarTree ast);
+TypedAst type_check(UntypedAst ast);
 
 void typed_ast_free(TypedAst ast);

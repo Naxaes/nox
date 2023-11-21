@@ -1,31 +1,110 @@
 #include "parser.h"
 #include "error.h"
-#include "logger.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 
 
+const char* literal_type_name(LiteralType type) {
+#define X(upper, lower, repr) case LiteralType_##upper: return #lower;
+    switch (type) {
+        ALL_LITERAL_TYPES(X)
+    }
+#undef X
+}
 
+const char* literal_type_repr(LiteralType type) {
+#define X(upper, lower, repr) case LiteralType_##upper: return #repr;
+    switch (type) {
+        ALL_LITERAL_TYPES(X)
+    }
+#undef X
+}
+
+const char* binary_op_name(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return #lower;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+const char* binary_op_repr(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return #repr;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+BinaryOpGroup binary_op_group(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+
+/* ---------------------------- NODE HELPERS -------------------------------- */
+int node_is_expression(const Node* node) {
+#define X(upper, lower, flags, body) case NodeKind_##upper: return (flags) & NodeFlag_Is_Expression;
+    switch (node->kind) {
+        ALL_NODES(X)
+    }
+#undef X
+}
+
+int node_is_statement(const Node* node) {
+#define X(upper, lower, flags, body) case NodeKind_##upper: return (flags) & NodeFlag_Is_Statement;
+    switch (node->kind) {
+        ALL_NODES(X)
+    }
+#undef X
+}
+
+int node_is_constant(const Node* node) {
+#define X(upper, lower, flags, body) case NodeKind_##upper: return (flags) & NodeFlag_Is_Constant;
+    switch (node->kind) {
+        ALL_NODES(X)
+    }
+#undef X
+}
+
+
+/* ---------------------------- BINARY OP HELPERS -------------------------------- */
+int binary_op_is_arithmetic(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group == BinaryOpGroup_Arithmetic;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+int binary_op_is_relational(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group == BinaryOpGroup_Relational;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
 
 
 /* ---------------------------- PARSER IMPL -------------------------------- */
 typedef struct {
-    const TokenArray tokens;
+    TokenArray tokens;
     TokenIndex token_index;
-
-    NodeBlock*  current_block;
-    int         current_decl_count;
-
-    NodeId     block_count;
-    Node**     stack;
-    NodeId     stack_count;
 
     Node*      nodes;
     NodeId     node_count;
     Node**     views;
     NodeId     view_count;
+    Node**     stack;
+    NodeId     stack_count;
+
+    NodeBlock* current_block;
+    NodeId     block_count;
 } Parser;
 
 void parser_free(Parser* parser) {
@@ -35,9 +114,9 @@ void parser_free(Parser* parser) {
     token_array_free(parser->tokens);
 }
 
-GrammarTree parser_to_ast(Parser* parser, Node* start) {
+UntypedAst parser_to_ast(Parser* parser, Node* start) {
     free(parser->stack);
-    return (GrammarTree) {
+    return (UntypedAst) {
         parser->tokens,
         parser->nodes,
         start,
@@ -47,11 +126,11 @@ GrammarTree parser_to_ast(Parser* parser, Node* start) {
 }
 
 /* ---------------------------- PARSER HELPERS -------------------------------- */
-static inline Token current(const Parser* parser) {
+static inline Token current(Parser* parser) {
     return parser->tokens.tokens[parser->token_index];
 }
 
-static inline Token peek(const Parser* parser) {
+static inline Token peek(Parser* parser) {
     if (parser->token_index + 1 >= parser->tokens.size)
         return Token_Eof;
     return parser->tokens.tokens[parser->token_index + 1];
@@ -61,7 +140,7 @@ static inline TokenIndex advance(Parser* parser) {
     return parser->token_index++;
 }
 
-static inline const char* repr_of_current(const Parser* parser) {
+static inline const char* repr_of_current(Parser* parser) {
     return lexer_repr_of(parser->tokens, parser->token_index);
 }
 
@@ -79,27 +158,6 @@ static inline NodeId reserve_node(Parser* parser) {
 static inline Node* set_node(Parser* parser, NodeId id, Node node) {
     parser->nodes[id] = node;
     return &parser->nodes[id];
-}
-
-// Sorts the nodes in the stack by declaration order.
-// This is so we can visit function declarations before they are used.
-static int sort_nodes_by_fun_decl(Node** nodes, int count) {
-    int fun_count = 0;
-    for (int i = 0; i < count; ++i) {
-        if (nodes[i]->kind == NodeKind_FunDecl) {
-            for (int j = i; j > fun_count; --j) {
-                if (nodes[j - 1]->kind == NodeKind_FunDecl) {
-                    Node* temp = nodes[j];
-                    nodes[j] = nodes[j - 1];
-                    nodes[j - 1] = temp;
-                } else {
-                    break;
-                }
-            }
-            fun_count += 1;
-        }
-    }
-    return fun_count;
 }
 
 static inline NodeId stack_snapshot(Parser* parser) {
@@ -161,7 +219,7 @@ typedef struct {
     Precedence precedence;
 } ParseRule;
 
-ParseRule rules[30] = {
+ParseRule rules[] = {
         [Token_Number]              = { number,       NULL,         Precedence_None},
         [Token_Real]                = { real,         NULL,         Precedence_None},
         [Token_String]              = { string,       NULL,         Precedence_None},
@@ -179,21 +237,13 @@ ParseRule rules[30] = {
         [Token_Greater]             = { NULL,         binary,       Precedence_Comparison},
         [Token_Bang]                = { NULL,         NULL,         Precedence_None},
         [Token_Equal]               = { NULL,         NULL,         Precedence_None},
-        [Token_Colon]               = { NULL,         NULL,         Precedence_None},
-        [Token_Colon_Equal]         = { NULL,         NULL,         Precedence_None},
         [Token_If]                  = { NULL,         NULL,         Precedence_None},
-        [Token_Else]                = { NULL,         NULL,         Precedence_None},
-        [Token_While]               = { NULL,         NULL,         Precedence_None},
-        [Token_Fun]                 = { NULL,         NULL,         Precedence_None},
-        [Token_Return]              = { NULL,         NULL,         Precedence_None},
         [Token_Open_Paren]          = { group,        call,         Precedence_Call},
         [Token_Close_Paren]         = { NULL,         NULL,         Precedence_None},
         [Token_Open_Brace]          = { NULL,         NULL,         Precedence_None},
         [Token_Close_Brace]         = { NULL,         NULL,         Precedence_None},
-        [Token_Comma]               = { NULL,         NULL,         Precedence_None},
         [Token_Eof]                 = { NULL,         NULL,         Precedence_None},
 };
-
 
 static Node* precedence(Parser* parser, Precedence precedence) {
     Token token = current(parser);
@@ -220,7 +270,6 @@ static Node* precedence(Parser* parser, Precedence precedence) {
     return left;
 }
 
-
 static Node* number(Parser* parser) {
     assert(current(parser) == Token_Number && "Expected number token");
     TokenIndex start = parser->token_index;
@@ -232,7 +281,6 @@ static Node* number(Parser* parser) {
     NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = LiteralType_Integer, .value.integer = value };
     return add_node(parser, (Node) { .literal = literal });
 }
-
 
 static Node* real(Parser* parser) {
     assert(current(parser) == Token_Real && "Expected real token");
@@ -246,7 +294,6 @@ static Node* real(Parser* parser) {
     return add_node(parser, (Node) { .literal = literal });
 }
 
-
 static Node* string(Parser* parser) {
     assert(current(parser) == Token_String && "Expected string token");
     TokenIndex start = parser->token_index;
@@ -257,7 +304,6 @@ static Node* string(Parser* parser) {
     NodeLiteral literal = { { NodeKind_Literal, start, start }, .type = LiteralType_String, .value.string = repr };
     return add_node(parser, (Node) { .literal = literal });
 }
-
 
 static Node* identifier(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
@@ -273,7 +319,6 @@ static Node* identifier(Parser* parser) {
     return add_node(parser, node_identifier(ident));
 }
 
-
 static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
     assert((
@@ -282,42 +327,59 @@ static Node* binary(Parser* parser, Node* left) {
     ) && "Expected binary operator");
     TokenIndex start = parser->token_index;
 
-    static const BinaryOp bin_op_map[] = {
-        [Token_Plus]        = BinaryOp_Add,
-        [Token_Minus]       = BinaryOp_Sub,
-        [Token_Asterisk]    = BinaryOp_Mul,
-        [Token_Slash]       = BinaryOp_Div,
-        [Token_Percent]     = BinaryOp_Mod,
-        [Token_Less]        = BinaryOp_Lt,
-        [Token_Less_Equal]  = BinaryOp_Le,
-        [Token_Equal_Equal] = BinaryOp_Eq,
-        [Token_Bang_Equal]  = BinaryOp_Ne,
-        [Token_Greater_Equal] = BinaryOp_Ge,
-        [Token_Greater]     = BinaryOp_Gt,
-    };
-    BinaryOp op = bin_op_map[token];
+    NodeBinary binary;
+    switch (token) {
+        case Token_Plus: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Add };
+        } break;
+        case Token_Minus: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Sub };
+        } break;
+        case Token_Asterisk: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Mul };
+        } break;
+        case Token_Slash: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Div };
+        } break;
+        case Token_Percent: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Mod };
+        } break;
+        case Token_Less: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Lt };
+        } break;
+        case Token_Less_Equal: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Le };
+        } break;
+        case Token_Equal_Equal: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Eq };
+        } break;
+        case Token_Bang_Equal: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Ne };
+        } break;
+        case Token_Greater_Equal: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Ge };
+        } break;
+        case Token_Greater: {
+            binary = (NodeBinary) { node_base_binary(start, 0), .left=left, .right=0, .op=BinaryOp_Gt };
+        } break;
+        default: {
+            assert(0 && "Invalid binary operator");
+        }
+    }
 
     NodeId id = reserve_node(parser);
     advance(parser);
 
     ParseRule rule = rules[token];
-    Node* right = precedence(parser, (Precedence)(rule.precedence + 1));
+    binary.right = precedence(parser, (Precedence)(rule.precedence + 1));
+    binary.base.end = binary.right->base.end;
 
-    NodeBinary binary = {
-        node_base_binary(start, start),
-        .op = op,
-        .left = left,
-        .right = right
-    };
-
-    return set_node(parser, id, node_binary(binary));
+    return set_node(parser, id, (Node) { .binary = binary });
 }
-
 
 static Node* call(Parser* parser, Node* left) {
     assert(current(parser) == Token_Open_Paren && "Expected '(' token");
     assert(left->kind == NodeKind_Identifier && "Expected identifier node");
-
     TokenIndex start = parser->token_index;
     advance(parser);
 
@@ -327,28 +389,21 @@ static Node* call(Parser* parser, Node* left) {
         while (current(parser) != Token_Close_Paren && current(parser) != Token_Eof) {
             if ((node = expression(parser)) == NULL)
                 return NULL;
-
-            stack_push(parser, node);
-
-            // If there is a comma, advance past it and continue parsing arguments.
-            if (current(parser) == Token_Comma) {
+            parser->stack[parser->stack_count++] = node;
+            if (current(parser) == Token_Comma)
                 advance(parser);
-                continue;
-            } else {
+            else
                 break;
-            }
         }
-
         if (current(parser) != Token_Close_Paren) {
-            fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after argument list, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
+            fprintf(stderr, "[Error] (Parser) " STR_FMT "\n    Expected ')' after expression, got '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
             int begin = (int) parser->tokens.source_offsets[parser->token_index];
             point_to_error(parser->tokens.source, begin, (int)start+1);
             return NULL;
         }
-
-        // Advance past the ')' token.
         advance(parser);
     }
+
     size_t count = parser->stack_count - snapshot;
     Node** expressions = stack_restore(parser, snapshot);
 
@@ -416,7 +471,7 @@ static Node* parse_type(Parser* parser) {
 
 }
 
-static Node* assign(Parser* parser) {
+static Node* assignment(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
     TokenIndex start = parser->token_index;
 
@@ -459,25 +514,23 @@ static Node* var_decl(Parser* parser) {
     NodeVarDecl var_decl = {
         node_base_var_decl(start, expr->base.end),
         .name = repr,
-        .decl_offset = parser->current_decl_count++,
         .expression = expr
     };
-
     return add_node(parser, node_var_decl(var_decl));
 }
 
 static Node* block(Parser* parser) {
     assert(current(parser) == Token_Open_Brace && "Expected '{' token");
-
     TokenIndex start = parser->token_index;
     advance(parser);
 
     NodeBlock* block = (NodeBlock*) add_node(parser, node_block((NodeBlock) {
             node_base_block(start, 0),
             .id = (i32) ++parser->block_count,
-            .parent = parser->current_block == NULL ? 0 : parser->current_block->id,
+            .parent = parser->current_block->id,
+            .nodes = NULL
     }));
-    NodeBlock* previous_block = parser->current_block;
+    NodeBlock* previous = parser->current_block;
     parser->current_block = block;
 
     size_t snapshot = stack_snapshot(parser);
@@ -498,61 +551,15 @@ static Node* block(Parser* parser) {
     Node** statements = stack_restore(parser, snapshot);
 
     TokenIndex stop = parser->token_index;
-    parser->current_block->base = node_base_block(start, stop);
-    parser->current_block->nodes = statements;
-    parser->current_block->count = (i32) count;
+    block->base = node_base_block(start, stop);
+    block->nodes = statements;
+    block->count = (i32) count;
 
-    parser->current_block = previous_block;
+    parser->current_block = previous;
     return (Node*) block;
 }
 
-static Node* fun_body(Parser* parser) {
-    assert(current(parser) == Token_Open_Brace && "Expected '{' token");
-
-    TokenIndex start = parser->token_index;
-    advance(parser);
-
-    NodeFunBody* body = (NodeFunBody*) add_node(parser, node_fun_body((NodeFunBody) {
-            node_base_fun_body(start, 0),
-            .id = (i32) ++parser->block_count,
-            .parent = parser->current_block == NULL ? 0 : parser->current_block->id,
-    }));
-
-    NodeBlock* previous_block = parser->current_block;
-    int previous_decl_count = parser->current_decl_count;
-
-    parser->current_block = (NodeBlock*) body;
-
-    size_t snapshot = stack_snapshot(parser);
-    Node* node = NULL;
-    {
-        while (current(parser) != Token_Close_Brace && current(parser) != Token_Eof) {
-            if ((node = statement(parser)) == NULL)
-                return NULL;
-            stack_push(parser, node);
-        }
-        if (current(parser) != Token_Close_Brace) {
-            fprintf(stderr, "Expected '}' after block\n");
-            return NULL;
-        }
-        advance(parser);
-    }
-    size_t count = parser->stack_count - snapshot;
-    Node** statements = stack_restore(parser, snapshot);
-
-    body->decls = parser->current_decl_count - previous_decl_count;
-
-    TokenIndex stop = parser->token_index;
-    parser->current_block->base = node_base_fun_body(start, stop);
-    parser->current_block->nodes = statements;
-    parser->current_block->count = (i32) count;
-
-    parser->current_block = previous_block;
-    parser->current_decl_count = previous_decl_count;
-    return (Node*) body;
-}
-
-static NodeFunParam* fun_param(Parser* parser, int offset) {
+static NodeFunParam* fun_param(Parser* parser) {
     assert(current(parser) == Token_Identifier && "Expected identifier token");
     TokenIndex start = parser->token_index;
 
@@ -573,7 +580,6 @@ static NodeFunParam* fun_param(Parser* parser, int offset) {
 
     NodeFunParam fun_param = {
         node_base_fun_param(start, start),
-        .offset = offset,
         .name = repr,
         .type = type,
     };
@@ -584,9 +590,8 @@ static NodeFunParam** fun_params(Parser* parser, size_t* count) {
     size_t snapshot = stack_snapshot(parser);
     NodeFunParam* param = NULL;
     {
-        int offset = 0;
         while (current(parser) != Token_Close_Paren && current(parser) != Token_Eof) {
-            if ((param = fun_param(parser, offset++)) == NULL)
+            if ((param = fun_param(parser)) == NULL)
                 return NULL;
             stack_push(parser, (Node*) param);
             if (current(parser) == Token_Comma)
@@ -625,24 +630,22 @@ static NodeFunDecl* fun_decl(Parser* parser) {
     size_t count;
     NodeFunParam** params = fun_params(parser, &count);
 
-    parser->current_decl_count = (int) count;
-
     Node* type = NULL;
     if (current(parser) != Token_Open_Brace) {
         type = parse_type(parser);
     }
 
-    Node* body = fun_body(parser);
+    Node* body = block(parser);
     if (body == NULL)
         return NULL;
 
     NodeFunDecl fun_decl = {
-        .base = node_base_fun_decl(start, body->base.end),
+        node_base_fun_decl(start, body->base.end),
         .name = repr,
         .params = params,
         .return_type = type,
-        .param_count = (i32) count,
-        .body = (NodeFunBody *) body,
+        .count = (i32) count,
+        .block = (NodeBlock*) body
     };
     return (NodeFunDecl*) add_node(parser, node_fun_decl(fun_decl));
 }
@@ -652,7 +655,7 @@ static Node* return_stmt(Parser* parser) {
     TokenIndex start = parser->token_index;
     advance(parser);
 
-    // TODO(ted): Make a void/unit expression to disambiguate (is it needed?)
+    // TODO(ted): Make a void/unit expression.
     Node* expr = expression(parser);
     if (expr == NULL)
         return NULL;
@@ -758,7 +761,7 @@ static Node* statement(Parser* parser) {
             if (peek(parser) == Token_Colon_Equal) {
                 return var_decl(parser);
             } else if (peek(parser) == Token_Equal) {
-                return assign(parser);
+                return assignment(parser);
             } else {
                 return expression(parser);
             }
@@ -791,25 +794,32 @@ static Node* statement(Parser* parser) {
 }
 
 
-GrammarTree parse(const TokenArray tokens) {
+UntypedAst parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
         .token_index = 0,
-        .stack = (Node**) malloc(1024 * sizeof(Node*)),
-        .stack_count = 0,
-        .current_block = NULL,
-        .current_decl_count = 0,
-        .block_count = 0,
         .nodes = (Node*) malloc(1024 * sizeof(Node)),
         .node_count = 0,
         .views = (Node**) malloc(1024 * sizeof(Node*)),
         .view_count = 0,
+        .stack = (Node**) malloc(1024 * sizeof(Node*)),
+        .stack_count = 0,
+        .current_block = NULL,
+        .block_count = 0,
     };
 
     // Reserve one slot so that any references to 0 are invalid,
     // as no nodes should be able to reference a start node.
     TokenIndex first = parser.token_index;
-    NodeId module_id = reserve_node(&parser);
+    parser.current_block = (NodeBlock*) add_node(&parser, node_block((NodeBlock) {
+        node_base_block(0, 0),
+        .id = 0,
+        .parent = -1,
+        .nodes = NULL,
+        .decls = NULL,
+        .decl_count = 0
+    }));
+
 
     size_t snapshot = stack_snapshot(&parser);
     while (parser.token_index < tokens.size) {
@@ -820,24 +830,16 @@ GrammarTree parse(const TokenArray tokens) {
             if (node == NULL) {
                 goto error;
             }
-            stack_push(&parser, node);
+           parser.stack[parser.stack_count++] = node;
         } else {
-            int count = (int) (parser.stack_count - snapshot);
+            size_t count = parser.stack_count - snapshot;
             Node** statements = stack_restore(&parser, snapshot);
 
-            int fun_count = sort_nodes_by_fun_decl(statements, count);
-            int stmt_count = count - fun_count;
-
             TokenIndex stop = parser.token_index;
-            NodeModule module = {
-                node_base_module(first, stop),
-                .stmts = statements + fun_count,
-                .stmt_count = (i32) stmt_count,
-                .decls = statements,
-                .decl_count = fun_count,
-                .global_count = parser.current_decl_count,
-            };
-            return parser_to_ast(&parser, (Node*) set_node(&parser, module_id, node_module(module)));
+            parser.current_block->base = node_base_block(first, stop);
+            parser.current_block->nodes = statements;
+            parser.current_block->count = (i32) count;
+            return parser_to_ast(&parser, (Node*)parser.current_block);
         }
     }
 
@@ -845,11 +847,11 @@ GrammarTree parse(const TokenArray tokens) {
     
     error:;
     parser_free(&parser);
-    return (GrammarTree) {tokens, NULL, NULL, NULL, 0 };
+    return (UntypedAst) { tokens, NULL, NULL, NULL, 0 };
 }
 
 
-void grammar_tree_free(GrammarTree ast) {
+void grammar_tree_free(UntypedAst ast) {
     free(ast.nodes);
     free(ast.views);
     token_array_free(ast.tokens);

@@ -7,12 +7,12 @@
 
 <block>         ::= "{" <statement> [<statement>] "}"
 
-<statement>     ::= <fn-decl> | <expression> | <assign>
+<statement>     ::= <fn-decl> | <expression> | <assignment>
 
 <fn-decl>       ::= "fun" <identifier> "(" [<params>] ")" [<type>] <block>
 <params>        ::= <identifier> ":" <type> ["," <params>]
 
-<assign>    ::= <identifier> "=" <expression>
+<assignment>    ::= <identifier> "=" <expression>
 
 <expression>    ::= <identifier> | <literal> | <call> | <binary>
 

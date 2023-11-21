@@ -44,7 +44,6 @@ set(SOURCES
     src/transpiler/c_transpiler.c
     src/parser/visitor.c
     src/parser/ast_printer.c
-        src/parser/node.c
 )
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)

@@ -124,7 +124,7 @@ ArgCommands parse_args(int argc, const char* const argv[]) {
         exit(EXIT_SUCCESS);
     }
 
-    ArgCommands commands = { .working_file=argv[0], .input_file=0, .mode=NO_RUN_MODE, .verbose=0, .take_time=0 };
+    ArgCommands commands = { .working_file=argv[0], .input_file=0, .mode=NO_RUN_MODE, .is_quiet=0, .take_time=0 };
     argv++; argc--;
     for (int i = 0; i < argc; ++i) {
         const char* const arg = argv[i];
@@ -135,8 +135,8 @@ ArgCommands parse_args(int argc, const char* const argv[]) {
         else if (is_argument(arg, RUN_MODE_STRING[RUN]))   {  i += parse_run(argc-i-1,   argv+i+1, &commands); }
         else if (is_argument(arg, RUN_MODE_STRING[SIM]))   {  i += parse_sim(argc-i-1,   argv+i+1, &commands); }
         else if (is_argument(arg, RUN_MODE_STRING[HELP]))  {  commands.mode = HELP; }
-        else if (is_argument(arg, "-v") || is_argument(arg, "--verbose")) {  commands.verbose   = 1; }
-        else if (is_argument(arg, "-t") || is_argument(arg, "--time"))    {  commands.take_time = 1; }
+        else if (is_argument(arg, "-q") || is_argument(arg, "--quiet")) {  commands.is_quiet  = 1; }
+        else if (is_argument(arg, "-t") || is_argument(arg, "--time"))  {  commands.take_time = 1; }
         else {
             // @TODO: Check that there are no more commands.
             fprintf(stderr, "Unknown command '%s'\n", argv[i]);
