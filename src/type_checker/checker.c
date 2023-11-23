@@ -9,13 +9,12 @@
 
 
 void typed_ast_free(TypedAst ast) {
-    free(ast.nodes);
+    grammar_tree_free(ast.tree);
     Block* block = ast.block;
-    while (block != NULL) {
-        free(block->locals);
-        block++;
+    for (int i = 0; i < ast.count; ++i) {
+        dealloc(block[i].locals);
     }
-    free(ast.block);
+    dealloc(ast.block);
 }
 
 
@@ -23,7 +22,7 @@ void typed_ast_free(TypedAst ast) {
 typedef struct {
     Visitor visitor;
     Logger* logger;
-    GrammarTree ast;
+    GrammarTree tree;
 
     Block* blocks;
     size_t block_count;
@@ -34,18 +33,17 @@ typedef struct {
 
 static void checker_free(Checker* checker) {
     for (size_t i = 0; i < checker->block_count; ++i) {
-        free(checker->blocks[i].locals);
+        dealloc(checker->blocks[i].locals);
     }
-    free(checker->blocks);
-    grammar_tree_free(checker->ast);
+    dealloc(checker->blocks);
+    grammar_tree_free(checker->tree);
 }
 
 static TypedAst checker_to_ast(Checker* checker) {
     return (TypedAst) {
-        checker->ast.nodes,
-        checker->ast.views,
-        checker->ast.start,
+        checker->tree,
         checker->blocks,
+        checker->tree.block_count + 1
     };
 }
 
@@ -53,7 +51,7 @@ static Block* push_block(Checker* checker, const NodeBlock* block) {
     Block* current = checker->current;
     Block* x = checker->blocks + block->id;
     if (x->locals == NULL) {
-        x->locals = (Local *) malloc(1024 * sizeof(Local));
+        x->locals = (Local *) alloc(1024 * sizeof(Local));
         x->count = 0;
         x->parent = block->parent;
     }
@@ -82,30 +80,32 @@ static Local* find_local(Checker* checker, const char* name) {
 }
 
 static void report_undeclared_identifier(Checker* checker, const char* name, const Node* node) {
-    error(checker->logger, STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->ast.tokens.name), name);
-    int start = (int) checker->ast.tokens.source_offsets[node->base.start];
-    int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
-    const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
+    error(checker->logger, STR_FMT "\n    Undeclared identifier: '%s'\n", STR_ARG(checker->tree.tokens.name), name);
+    int start = (int) checker->tree.tokens.source_offsets[node->base.start];
+    int end   = (int) checker->tree.tokens.source_offsets[node->base.end];
+    const char* repr = lexer_repr_of(checker->tree.tokens, node->base.end);
 
-    point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
+    point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
 }
 
 static void report_binary_op_mismatch(Checker* checker, const NodeBinary* binary, TypeId left, TypeId right) {
-    error(checker->logger, STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->ast.tokens.name), binary_op_repr(binary->op), literal_type_repr(left), literal_type_repr(right));
-    int start = (int) checker->ast.tokens.source_offsets[binary->base.start];
-    int end   = (int) checker->ast.tokens.source_offsets[binary->base.end];
-    const char* repr = lexer_repr_of(checker->ast.tokens, binary->base.end);
+    error(checker->logger, STR_FMT "\n    Operator '%s' is not supported between '%s' and '%s'\n", STR_ARG(checker->tree.tokens.name), binary_op_repr(binary->op), literal_type_repr(left), literal_type_repr(right));
+    int start = (int) checker->tree.tokens.source_offsets[binary->base.start];
+    int end   = (int) checker->tree.tokens.source_offsets[binary->base.end];
+    const char* repr = lexer_repr_of(checker->tree.tokens, binary->base.end);
 
-    point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
+    point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
 }
 
 static void report_type_expectation(Checker* checker, const char* prefix, const Node* node, TypeId expected, TypeId got) {
-    error(checker->logger, STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->ast.tokens.name), prefix, literal_type_repr(expected), literal_type_repr(got));
-    int start = (int) checker->ast.tokens.source_offsets[node->base.start];
-    int end   = (int) checker->ast.tokens.source_offsets[node->base.end];
-    const char* repr = lexer_repr_of(checker->ast.tokens, node->base.end);
+    expected = (expected == (TypeId) -1) ? LiteralType_Void : expected;
+    got = (got == (TypeId) -1) ? LiteralType_Void : got;
+    error(checker->logger, STR_FMT "\n    %s. Expected '%s', got '%s'\n", STR_ARG(checker->tree.tokens.name), prefix, literal_type_repr(expected), literal_type_repr(got));
+    int start = (int) checker->tree.tokens.source_offsets[node->base.start];
+    int end   = (int) checker->tree.tokens.source_offsets[node->base.end];
+    const char* repr = lexer_repr_of(checker->tree.tokens, node->base.end);
 
-    point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
+    point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
 }
 
 
@@ -124,6 +124,36 @@ static TypeId type_check_identifier(Checker* checker, const NodeIdentifier* iden
     return 0;
 }
 
+static TypeId type_check_unary(Checker* checker, const NodeUnary* node) {
+    TypeId expr = (TypeId) visit(checker, node->expr);
+    if (expr == 0)
+        return 0;
+
+    if (unary_op_is_logical(node->op)) {
+        if (expr != LiteralType_Boolean) {
+            report_type_expectation(checker, "Unary operator type mismatch", (Node*) node->expr, LiteralType_Boolean, expr);
+            return 0;
+        }
+        return LiteralType_Boolean;
+    }
+    else if (unary_op_is_arithmetic(node->op)) {
+        if (expr != LiteralType_Integer) {
+            report_type_expectation(checker, "Unary operator type mismatch", (Node*) node->expr, LiteralType_Integer, expr);
+            return 0;
+        }
+        return LiteralType_Integer;
+    }
+    else {
+        error(checker->logger, STR_FMT "\n    Unary operator '%s' is not supported\n", STR_ARG(checker->tree.tokens.name), unary_op_repr(node->op));
+        int start = (int) checker->tree.tokens.source_offsets[node->base.start];
+        int end   = (int) checker->tree.tokens.source_offsets[node->base.end];
+        const char* repr = lexer_repr_of(checker->tree.tokens, node->base.end);
+
+        point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
+        return 0;
+    }
+}
+
 static TypeId type_check_binary(Checker* checker, const NodeBinary* binary) {
     TypeId left = (TypeId) visit(checker, binary->left);
     if (left == 0)
@@ -138,15 +168,21 @@ static TypeId type_check_binary(Checker* checker, const NodeBinary* binary) {
         return 0;
     }
 
-    if (binary_op_is_relational(binary->op))
+    if (binary_op_is_relational(binary->op) || binary_op_is_logical(binary->op))
         return LiteralType_Boolean;
     else
         return left;
 }
 
 static TypeId type_check_call(Checker* checker, const NodeCall* call) {
-    if (strcmp(call->name, "print") == 0)
+    if (strcmp(call->name, "print") == 0) {
+        for (i32 i = 0; i < call->count; ++i) {
+            Node* arg = call->args[i];
+            if (visit(checker, arg) == 0)
+                return 0;
+        }
         return -1;
+    }
 
     Local* local = find_local(checker, call->name);
     if (local == NULL) {
@@ -155,23 +191,23 @@ static TypeId type_check_call(Checker* checker, const NodeCall* call) {
     }
 
     if (local->decl->kind != NodeKind_FunDecl) {
-        error(checker->logger, STR_FMT "\n    '%s' is not a function\n", STR_ARG(checker->ast.tokens.name), call->name);
-        int start = (int) checker->ast.tokens.source_offsets[call->base.start];
-        int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
-        const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+        error(checker->logger, STR_FMT "\n    '%s' is not a function\n", STR_ARG(checker->tree.tokens.name), call->name);
+        int start = (int) checker->tree.tokens.source_offsets[call->base.start];
+        int end   = (int) checker->tree.tokens.source_offsets[call->base.end];
+        const char* repr = lexer_repr_of(checker->tree.tokens, call->base.end);
 
-        point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
+        point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
         return 0;
     }
 
     NodeFunDecl* fun_decl = &local->decl->fun_decl;
     if (fun_decl->param_count != call->count) {
-        error(checker->logger, STR_FMT "\n    Function '%s' requires %d arguments, got %d\n", STR_ARG(checker->ast.tokens.name), call->name, fun_decl->param_count, call->count);
-        int start = (int) checker->ast.tokens.source_offsets[call->base.start];
-        int end   = (int) checker->ast.tokens.source_offsets[call->base.end];
-        const char* repr = lexer_repr_of(checker->ast.tokens, call->base.end);
+        error(checker->logger, STR_FMT "\n    Function '%s' requires %d arguments, got %d\n", STR_ARG(checker->tree.tokens.name), call->name, fun_decl->param_count, call->count);
+        int start = (int) checker->tree.tokens.source_offsets[call->base.start];
+        int end   = (int) checker->tree.tokens.source_offsets[call->base.end];
+        const char* repr = lexer_repr_of(checker->tree.tokens, call->base.end);
 
-        point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
+        point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
         return 0;
     }
 
@@ -196,12 +232,12 @@ static TypeId type_check_call(Checker* checker, const NodeCall* call) {
 static TypeId type_check_var_decl(Checker* checker, const NodeVarDecl* var_decl) {
     Local* local = find_local(checker, var_decl->name);
     if (local) {
-        error(checker->logger, STR_FMT "\n    Variable '%s' already declared\n", STR_ARG(checker->ast.tokens.name), var_decl->name);
-        int start = (int) checker->ast.tokens.source_offsets[var_decl->base.start];
-        int end   = (int) checker->ast.tokens.source_offsets[var_decl->base.end];
-        const char* repr = lexer_repr_of(checker->ast.tokens, var_decl->base.end);
+        error(checker->logger, STR_FMT "\n    Variable '%s' already declared\n", STR_ARG(checker->tree.tokens.name), var_decl->name);
+        int start = (int) checker->tree.tokens.source_offsets[var_decl->base.start];
+        int end   = (int) checker->tree.tokens.source_offsets[var_decl->base.end];
+        const char* repr = lexer_repr_of(checker->tree.tokens, var_decl->base.end);
 
-        point_to_error(checker->logger, checker->ast.tokens.source, start, end + (int)strlen(repr));
+        point_to_error(checker->logger, checker->tree.tokens.source, start, end + (int)strlen(repr));
         return 0;
     }
 
@@ -229,11 +265,17 @@ static TypeId type_check_assign(Checker* checker, const NodeAssign* assign) {
         return 0;
 
     Local* local = find_local(checker, assign->name);
-    if (local)
-        return local->type;
+    if (local == NULL) {
+        report_undeclared_identifier(checker, assign->name, (Node*) assign);
+        return 0;
+    }
 
-    report_undeclared_identifier(checker, assign->name, (Node*) assign);
-    return 0;
+    if (local->type != expr) {
+        report_type_expectation(checker, "Assignment type mismatch", assign->expression, local->type, expr);
+        return 0;
+    }
+
+    return local->type;
 }
 
 static TypeId type_check_block(Checker* checker, const NodeBlock* node) {
@@ -273,11 +315,11 @@ static TypeId type_check_fun_body(Checker* checker, const NodeFunBody* node) {
 static TypeId type_check_fun_decl(Checker* checker, const NodeFunDecl* fun_decl) {
     Local* local = find_local(checker, fun_decl->name);
     if (local != NULL) {
-        error(checker->logger, STR_FMT "\n    Function '%s' already declared\n", STR_ARG(checker->ast.tokens.name), fun_decl->name);
-        int start = (int) checker->ast.tokens.source_offsets[fun_decl->base.start];
-        int end   = (int) checker->ast.tokens.source_offsets[fun_decl->body->base.start];
+        error(checker->logger, STR_FMT "\n    Function '%s' already declared\n", STR_ARG(checker->tree.tokens.name), fun_decl->name);
+        int start = (int) checker->tree.tokens.source_offsets[fun_decl->base.start];
+        int end   = (int) checker->tree.tokens.source_offsets[fun_decl->body->base.start];
 
-        point_to_error(checker->logger, checker->ast.tokens.source, start, end);
+        point_to_error(checker->logger, checker->tree.tokens.source, start, end);
         return 0;
     }
 
@@ -307,11 +349,11 @@ static TypeId type_check_fun_decl(Checker* checker, const NodeFunDecl* fun_decl)
 
 static TypeId type_check_return_stmt(Checker* checker, const NodeReturn* return_stmt) {
     if (checker->current_function == NULL) {
-        error(checker->logger, STR_FMT "\n    Return statement outside of function\n", STR_ARG(checker->ast.tokens.name));
-        int start = (int) checker->ast.tokens.source_offsets[return_stmt->base.start];
-        int end   = (int) checker->ast.tokens.source_offsets[return_stmt->base.end];
+        error(checker->logger, STR_FMT "\n    Return statement outside of function\n", STR_ARG(checker->tree.tokens.name));
+        int start = (int) checker->tree.tokens.source_offsets[return_stmt->base.start];
+        int end   = (int) start + strlen("return");
 
-        point_to_error(checker->logger, checker->ast.tokens.source, start, end);
+        point_to_error(checker->logger, checker->tree.tokens.source, start, end);
         return 0;
     }
 
@@ -319,6 +361,10 @@ static TypeId type_check_return_stmt(Checker* checker, const NodeReturn* return_
     if (expr == 0)
         return 0;
 
+    if (checker->current_function->return_type == NULL) {
+        report_type_expectation(checker, "Return type mismatch", return_stmt->expression, 0, expr);
+        return 0;
+    }
     if (expr != (TypeId) checker->current_function->return_type->type.name) {
         report_type_expectation(checker, "Return type mismatch", return_stmt->expression, (TypeId) checker->current_function->return_type->type.name, expr);
         return 0;
@@ -337,10 +383,10 @@ static TypeId type_check_if_stmt(Checker* checker, const NodeIf* if_stmt) {
         return 0;
     }
 
-    if (type_check_block(checker, if_stmt->then_block) == 0)
+    if (visit(checker, (Node*) if_stmt->then_block) == 0)
         return 0;
 
-    if (if_stmt->else_block != NULL && type_check_block(checker, if_stmt->then_block) == 0)
+    if (if_stmt->else_block != NULL && visit(checker, (Node*) if_stmt->else_block) == 0)
         return 0;
 
     return -1;
@@ -356,10 +402,10 @@ static TypeId type_check_while_stmt(Checker* checker, const NodeWhile* while_stm
         return 0;
     }
 
-    if (type_check_block(checker, while_stmt->then_block) == 0)
+    if (visit(checker, (Node*) while_stmt->then_block) == 0)
         return 0;
 
-    if (while_stmt->else_block != NULL && type_check_block(checker, while_stmt->then_block) == 0)
+    if (while_stmt->else_block != NULL && visit(checker, (Node*) while_stmt->then_block) == 0)
         return 0;
 
     return -1;
@@ -399,9 +445,9 @@ TypedAst type_check(GrammarTree ast, Logger* logger) {
     Checker checker = {
         .visitor = visitor,
         .logger = logger,
-        .ast = ast,
-        .blocks = (Block*) alloc((ast.block_count + 1) * sizeof(Block)),
-        .block_count = 0,
+        .tree = ast,
+        .blocks = (Block*) memset(alloc((ast.block_count + 1) * sizeof(Block)), 0, (ast.block_count + 1) * sizeof(Block)),
+        .block_count = ast.block_count + 1,
         .current = NULL,
         .current_function = NULL,
     };
@@ -410,7 +456,7 @@ TypedAst type_check(GrammarTree ast, Logger* logger) {
 
     if (type == 0) {
         checker_free(&checker);
-        return (TypedAst) { NULL, NULL, NULL, NULL };
+        return (TypedAst) { (TokenArray) { 0 }, 0 };
     }
 
     return checker_to_ast(&checker);

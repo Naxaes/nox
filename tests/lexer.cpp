@@ -13,10 +13,11 @@ extern "C" {
 
 
 void test_tokenization(Str source, std::vector<Token> expected_tokens, std::vector<std::string> expected_reprs) {
-    TokenArray token_array = lexer_lex(STR("<test>"), source);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
+    TokenArray token_array = lexer_lex(STR("<test>"), source, &logger);
 
     expected_tokens.push_back(Token_Eof);
-    expected_reprs.emplace_back("<EOF>");
+    expected_reprs.emplace_back("");
 
     EXPECT_EQ(token_array.size, expected_tokens.size());
     size_t size = std::min((size_t)token_array.size, expected_tokens.size());

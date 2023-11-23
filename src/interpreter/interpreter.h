@@ -14,4 +14,9 @@ typedef struct {
 } Interpreter;
 
 
-i64 interpret(Bytecode code);
+typedef struct {
+    i64 result;
+    int error;
+} InterpreterResult;
+
+InterpreterResult interpret(Bytecode code);

@@ -66,7 +66,22 @@ static void visit_identifier(AstPrinter* printer, const NodeIdentifier* node) {
     const char* repr = lexer_repr_of(printer->ast->tokens, node->base.start);
     const char* path = printer->ast->tokens.name.data;
     fprintf(printer->output, "Identifier: id=%d, repr='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, path, location.row, location.column);
+}
 
+
+static void visit_unary(AstPrinter* printer, const NodeUnary* node) {
+    Location location = location_of_node(printer->ast, (Node*)node);
+    const char* repr = lexer_repr_of(printer->ast->tokens, node->base.start);
+    const char* path = printer->ast->tokens.name.data;
+
+    fprintf(printer->output, "Unary: id=%d, repr='%s', op='%s' @ %s:%d:%d\n", id_of(printer->ast, (Node*)node), repr, unary_op_repr(node->op), path, location.row, location.column);
+
+    printer->indentation += 1;
+    print_indentation(1, "expr");
+    visit((Visitor*) printer, node->expr);
+    printer->indentation -= 1;
+
+    printer_rst();
 }
 
 static void visit_binary(AstPrinter* printer, const NodeBinary* node) {
@@ -241,10 +256,10 @@ static void visit_if_stmt(AstPrinter* printer, const NodeIf* node) {
     print_indentation(0, "cond");
     visit((Visitor*) printer, node->condition);
     print_indentation(node->else_block == NULL, "then");
-    visit_block(printer, node->then_block);
+    visit(printer, (Node*) node->then_block);
     if (node->else_block != NULL) {
         print_indentation(1, "else");
-        visit_block(printer, node->else_block);
+        visit(printer, (Node*) node->else_block);
     }
     printer->indentation -= 1;
     printer_rst();
@@ -282,7 +297,7 @@ static void visit_module(AstPrinter* printer, const NodeModule* node) {
     int i = 0;
     if (node->decls != NULL) {
         while ((stmt = *(node->decls + i)) != NULL) {
-            print_indentation(node->decls[i+1] == NULL, "stmt%d", i);
+            print_indentation(node->decls[i+1] == NULL, "decl%d", i);
             visit((Visitor*) printer, stmt);
             i += 1;
         }

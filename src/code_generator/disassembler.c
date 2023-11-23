@@ -37,62 +37,79 @@ static const char* REG_NAME[] = {
     [15] = "r15",
 };
 
+static inline const char* reg(u64 index) {
+    if (index >= 16) return "<invalid>";
+    return REG_NAME[index];
+}
+
 
 void disassemble_instruction(Instruction instruction, FILE* output) {
     switch (instruction.type) {
         case Instruction_MovImm64: {
-            fprintf(output, "%-6s %-6s %-10lld", "Mov", REG_NAME[instruction.imm.dst], instruction.imm.val);
+            fprintf(output, "%-6s %-6s %-10lld", "Mov", reg(instruction.imm.dst), instruction.imm.val);
         } break;
         case Instruction_Mov: {
-            fprintf(output, "%-6s %-6s %-10s", "Mov", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Mov", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Add: {
-            fprintf(output, "%-6s %-6s %-10s", "Add", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Add", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Add_Imm: {
-            fprintf(output, "%-6s %-6s %-10lld", "Add", REG_NAME[instruction.imm.dst], instruction.imm.val);
+            fprintf(output, "%-6s %-6s %-10lld", "Add", reg(instruction.imm.dst), instruction.imm.val);
         } break;
         case Instruction_Sub: {
-            fprintf(output, "%-6s %-6s %-10s", "Sub", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Sub", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Mul: {
-            fprintf(output, "%-6s %-6s %-10s", "Mul", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Mul", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Div: {
-            fprintf(output, "%-6s %-6s %-10s", "Div", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Div", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Mod: {
-            fprintf(output, "%-6s %-6s %-10s", "Mod", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Mod", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Lt: {
-            fprintf(output, "%-6s %-6s %-10s", "Lt", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Lt", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Le: {
-            fprintf(output, "%-6s %-6s %-10s", "Le", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Le", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Eq: {
-            fprintf(output, "%-6s %-6s %-10s", "Eq", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Eq", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Ne: {
-            fprintf(output, "%-6s %-6s %-10s", "Ne", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Ne", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Ge: {
-            fprintf(output, "%-6s %-6s %-10s", "Ge", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Ge", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Gt: {
-            fprintf(output, "%-6s %-6s %-10s", "Gt", REG_NAME[instruction.reg.dst], REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6s %-10s", "Gt", reg(instruction.reg.dst), reg(instruction.reg.src));
+        } break;
+        case Instruction_Not: {
+            fprintf(output, "%-6s %-6s %-10s", "Not", reg(instruction.reg.dst), reg(instruction.reg.src));
+        } break;
+        case Instruction_Neg: {
+            fprintf(output, "%-6s %-6s %-10s", "Neg", reg(instruction.reg.dst), reg(instruction.reg.src));
+        } break;
+        case Instruction_And: {
+            fprintf(output, "%-6s %-6s %-10s", "And", reg(instruction.reg.dst), reg(instruction.reg.src));
+        } break;
+        case Instruction_Or: {
+            fprintf(output, "%-6s %-6s %-10s", "Or", reg(instruction.reg.dst), reg(instruction.reg.src));
         } break;
         case Instruction_Store: {
-            fprintf(output, "%-6s %-6lld %-10s", "Store", instruction.reg.dst, REG_NAME[instruction.reg.src]);
+            fprintf(output, "%-6s %-6lld %-10s", "Store", instruction.reg.dst, reg(instruction.reg.src));
         } break;
         case Instruction_Load: {
-            fprintf(output, "%-6s %-6s %-10lld", "Load", REG_NAME[instruction.reg.dst], instruction.reg.src);
+            fprintf(output, "%-6s %-6s %-10lld", "Load", reg(instruction.reg.dst), instruction.reg.src);
         } break;
         case Instruction_Jmp: {
             fprintf(output, "%-6s [%04llx] %-10s", "Jmp", instruction.jmp.label, " ");
         } break;
         case Instruction_JmpZero: {
-            fprintf(output, "%-6s [%04llx] %-10s", "JmpZ", instruction.jmp.label, REG_NAME[instruction.jmp.src]);
+            fprintf(output, "%-6s [%04llx] %-10s", "JmpZ", instruction.jmp.label, reg(instruction.jmp.src));
         } break;
         case Instruction_Print: {
             fprintf(output, "%-6s %-6s %-10s", "Print", " ", " ");
@@ -104,10 +121,10 @@ void disassemble_instruction(Instruction instruction, FILE* output) {
             fprintf(output, "%-6s %-6s %-10s", "Ret", " ", " ");
         } break;
         case Instruction_Push: {
-            fprintf(output, "%-6s %-6s %-10s", "Push", REG_NAME[instruction.reg.src], " ");
+            fprintf(output, "%-6s %-6s %-10s", "Push", reg(instruction.reg.src), " ");
         } break;
         case Instruction_Pop: {
-            fprintf(output, "%-6s %-6s %-10s", "Pop", REG_NAME[instruction.reg.dst], " ");
+            fprintf(output, "%-6s %-6s %-10s", "Pop", reg(instruction.reg.dst), " ");
         } break;
         case Instruction_Exit: {
             fprintf(output, "%-6s %-6s %-10s", "Exit", " ", " ");

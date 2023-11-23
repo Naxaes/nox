@@ -19,13 +19,11 @@ typedef struct {
 } Block;
 
 typedef struct {
-    // Extracted from the untyped ast.
-    Node*  nodes;
-    Node** views;
-    Node*  start;
+    const GrammarTree tree;
 
     // Type checked info.
     Block*  block;
+    i64     count;
 } TypedAst;
 
 TypedAst type_check(GrammarTree ast, Logger* logger);

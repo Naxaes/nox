@@ -84,3 +84,52 @@ int binary_op_is_relational(BinaryOp op) {
     }
 #undef X
 }
+
+int binary_op_is_logical(BinaryOp op) {
+#define X(upper, lower, repr, group) case BinaryOp_##upper: return BinaryOpGroup_##group == BinaryOpGroup_Logical;
+    switch (op) {
+        ALL_BINARY_OPS(X)
+    }
+#undef X
+}
+
+
+const char* unary_op_name(UnaryOp op) {
+#define X(upper, lower, repr, group) case UnaryOp_##upper: return #lower;
+    switch (op) {
+        All_UnaryOps(X)
+    }
+#undef X
+}
+
+const char* unary_op_repr(UnaryOp op) {
+#define X(upper, lower, repr, group) case UnaryOp_##upper: return #repr;
+    switch (op) {
+        All_UnaryOps(X)
+    }
+#undef X
+}
+
+int unary_op_is_arithmetic(UnaryOp op) {
+#define X(upper, lower, repr, group) case UnaryOp_##upper: return UnaryOpGroup_##group == UnaryOpGroup_Arithmetic;
+    switch (op) {
+        All_UnaryOps(X)
+    }
+#undef X
+}
+
+int unary_op_is_relational(UnaryOp op) {
+#define X(upper, lower, repr, group) case UnaryOp_##upper: return UnaryOpGroup_##group == UnaryOpGroup_Relational;
+    switch (op) {
+        All_UnaryOps(X)
+    }
+#undef X
+}
+
+int unary_op_is_logical(UnaryOp op) {
+#define X(upper, lower, repr, group) case UnaryOp_##upper: return UnaryOpGroup_##group == UnaryOpGroup_Logical;
+    switch (op) {
+        All_UnaryOps(X)
+    }
+#undef X
+}

@@ -10,6 +10,8 @@ void* visit(void* visitor, Node* node) {
             return impl->visit_literal(impl, (NodeLiteral*) node);
         case NodeKind_Identifier:
             return impl->visit_identifier(impl, (NodeIdentifier*) node);
+        case NodeKind_Unary:
+            return impl->visit_unary(impl, (NodeUnary*) node);
         case NodeKind_Binary:
             return impl->visit_binary(impl, (NodeBinary*) node);
         case NodeKind_Call:
@@ -46,7 +48,10 @@ void* walk(Visitor* visitor, Node* node) {
             return NULL;
         case NodeKind_Identifier:
             return NULL;
-        case NodeKind_Binary:      
+        case NodeKind_Unary:
+            visit(visitor, node->unary.expr);
+            return NULL;
+        case NodeKind_Binary:
             visit(visitor, node->binary.left);
             visit(visitor, node->binary.right);
             return NULL;
@@ -117,6 +122,11 @@ void* walk_literal(Visitor* visitor, NodeLiteral* node) {
 void* walk_identifier(Visitor* visitor, NodeIdentifier* node) {
     (void) visitor;
     (void) node;
+    return NULL;
+}
+
+void* walk_unary(Visitor* visitor, NodeUnary* node) {
+    visit(visitor, node->expr);
     return NULL;
 }
 

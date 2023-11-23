@@ -4,9 +4,11 @@
 
 
 static const char* LOG_LEVEL_NAMES[] = {
+    [LOG_LEVEL_DEBUG]  = "INFO",
     [LOG_LEVEL_INFO]  = "INFO",
     [LOG_LEVEL_WARN]  = "WARN",
     [LOG_LEVEL_ERROR] = "ERROR",
+    [LOG_LEVEL_PANIC] = "PANIC",
 };
 
 

@@ -20,6 +20,7 @@ void* walk(Visitor* visitor, Node* node);
 void* walk_view(Visitor* visitor, Node** nodes);
 void* walk_literal(Visitor* visitor, NodeLiteral* node);
 void* walk_identifier(Visitor* visitor, NodeIdentifier* node);
+void* walk_unary(Visitor* visitor, NodeUnary* node);
 void* walk_binary(Visitor* visitor, NodeBinary* node);
 void* walk_call(Visitor* visitor, NodeCall* node);
 void* walk_type(Visitor* visitor, NodeType* node);

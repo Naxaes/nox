@@ -1,3 +1,4 @@
+#include "memory.h"
 #include "file.h"
 
 #include <stdio.h>
@@ -13,7 +14,7 @@ Str read_file(const char* path) {
     size_t size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* buffer = malloc(size + 1);
+    char* buffer = alloc(size + 1);
     if (!buffer)
         return STR_EMPTY;
 
@@ -21,7 +22,7 @@ Str read_file(const char* path) {
     fclose(file);
 
     if (read != size) {
-        free(buffer);
+        dealloc(buffer);
         return STR_EMPTY;
     }
 

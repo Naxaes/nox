@@ -26,6 +26,13 @@ typedef union {
 } LiteralValue;
 
 typedef enum {
+    UnaryOpGroup_Arithmetic,
+    UnaryOpGroup_Relational,
+    UnaryOpGroup_Logical,
+    UnaryOpGroup_Bitwise,
+} UnaryOpGroup;
+
+typedef enum {
     BinaryOpGroup_Arithmetic,
     BinaryOpGroup_Relational,
     BinaryOpGroup_Logical,
@@ -33,21 +40,24 @@ typedef enum {
 } BinaryOpGroup;
 
 #define ALL_BINARY_OPS(X) \
-    X(Add, add, +,   Arithmetic)  \
-    X(Sub, sub, -,   Arithmetic)  \
-    X(Mul, mul, *,   Arithmetic)  \
-    X(Div, div, /,   Arithmetic)  \
-    X(Mod, mod, %,   Arithmetic)  \
-    X(Lt,  lt,  <,   Relational)  \
-    X(Le,  le,  <=,  Relational)  \
-    X(Eq,  eq,  ==,  Relational)  \
-    X(Ne,  ne,  !=,  Relational)  \
-    X(Ge,  ge,  >=,  Relational)  \
-    X(Gt,  gt,  >,   Relational)  \
+    X(Add,  add,  +,     Arithmetic)  \
+    X(Sub,  sub,  -,     Arithmetic)  \
+    X(Mul,  mul,  *,     Arithmetic)  \
+    X(Div,  div,  /,     Arithmetic)  \
+    X(Mod,  mod,  %,     Arithmetic)  \
+    X(Lt,   lt,   <,     Relational)  \
+    X(Le,   le,   <=,    Relational)  \
+    X(Eq,   eq,   ==,    Relational)  \
+    X(Ne,   ne,   !=,    Relational)  \
+    X(Ge,   ge,   >=,    Relational)  \
+    X(Gt,   gt,   >,     Relational)  \
+    X(And,  and,  and,   Logical)     \
+    X(Or,   or,   or,    Logical)     \
 
 #define X(upper, lower, repr, group) BinaryOp_##upper,
 typedef enum {
     ALL_BINARY_OPS(X)
+    BINARY_OP_LAST = BinaryOp_Or,
 } BinaryOp;
 #undef X
 const char* binary_op_name(BinaryOp op);
@@ -55,6 +65,24 @@ const char* binary_op_repr(BinaryOp op);
 BinaryOpGroup binary_op_group(BinaryOp op);
 int binary_op_is_arithmetic(BinaryOp op);
 int binary_op_is_relational(BinaryOp op);
+int binary_op_is_logical(BinaryOp op);
+
+
+#define All_UnaryOps(X) \
+    X(Neg, neg, -, Arithmetic)      \
+    X(Not, not, !, Logical)         \
+
+#define X(upper, lower, repr, group) UnaryOp_##upper,
+typedef enum {
+    All_UnaryOps(X)
+    UNARY_OP_LAST = UnaryOp_Not,
+} UnaryOp;
+#undef X
+const char* unary_op_name(UnaryOp op);
+const char* unary_op_repr(UnaryOp op);
+int unary_op_is_arithmetic(UnaryOp op);
+int unary_op_is_relational(UnaryOp op);
+int unary_op_is_logical(UnaryOp op);
 
 
 typedef enum {
@@ -72,6 +100,10 @@ typedef enum {
     )                                                                   \
     X(Identifier, identifier, NodeFlag_Is_Expression,                   \
         const char* name;                                               \
+    )                                                                   \
+    X(Unary, unary, NodeFlag_Is_Expression,                             \
+        Node* expr;                                                     \
+        UnaryOp op;                                                     \
     )                                                                   \
     X(Binary, binary, NodeFlag_Is_Expression,                           \
         Node* left;                                                     \

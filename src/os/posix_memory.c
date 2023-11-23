@@ -15,9 +15,14 @@ void* memory_map_executable(void* code, size_t size) {
 
     memcpy(memory, code, size);
     if (mprotect(memory, size, PROT_READ|PROT_EXEC) == -1) {
+        munmap(memory, size);
         perror("mprotect");
         return NULL;
     }
 
     return memory;
+}
+
+void memory_map_free(void* code, size_t size) {
+    munmap(code, size);
 }

@@ -24,3 +24,5 @@ void* memory_map_executable(void* code, size_t size) {
 
     return memory;
 }
+
+void memory_map_free(void* code, size_t size);

@@ -21,6 +21,8 @@ typedef struct {
     RunMode mode;
     int verbose;
     int take_time;
+    int show_help;
+    int as_source;
 } ArgCommands;
 
 

@@ -1,7 +1,10 @@
 #pragma once
 
+#include "memory.h"
 #include "types.h"
 #include "type_checker/checker.h"
+
+#include <stdlib.h>
 
 
 #define ALL_INSTRUCTIONS \
@@ -40,6 +43,10 @@ typedef enum {
     Instruction_Ne,
     Instruction_Ge,
     Instruction_Gt,
+    Instruction_Not,
+    Instruction_Neg,
+    Instruction_And,
+    Instruction_Or,
     Instruction_Store,
     Instruction_Load,
     Instruction_Jmp,
@@ -50,6 +57,7 @@ typedef enum {
     Instruction_Call,
     Instruction_Ret,
     Instruction_Exit,
+    INSTRUCTION_LAST = Instruction_Exit,
 } InstructionType;
 
 typedef struct {
@@ -79,6 +87,10 @@ typedef struct {
     Instruction* instructions;
     size_t size;
 } Bytecode;
+
+static inline void bytecode_free(Bytecode code) {
+    dealloc(code.instructions);
+}
 
 Bytecode generate_code(TypedAst ast);
 
