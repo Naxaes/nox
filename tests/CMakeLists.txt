@@ -46,6 +46,11 @@ set(SOURCES
     ${SRC_DIR}/parser/ast_printer.c
     ${SRC_DIR}/parser/node.c
 )
+
+add_executable(main ${SOURCES} main.cpp)
+target_include_directories(main PRIVATE ${SRC_DIR})
+target_link_libraries(main GTest::gtest_main GTest::gmock_main)
+
 add_executable(lexer ${SOURCES} lexer.cpp)
 target_include_directories(lexer PRIVATE ${SRC_DIR})
 target_link_libraries(lexer GTest::gtest_main GTest::gmock_main)
@@ -73,7 +78,7 @@ target_link_libraries(logic GTest::gtest_main GTest::gmock_main)
 
 
 include(GoogleTest)
-gtest_discover_tests(lexer
+gtest_discover_tests(main
     NO_PRETTY_TYPES
     EXCLUDE gtest gtest_main gmock gmock_main
 )

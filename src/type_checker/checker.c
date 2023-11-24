@@ -135,15 +135,13 @@ static TypeId type_check_unary(Checker* checker, const NodeUnary* node) {
             return 0;
         }
         return LiteralType_Boolean;
-    }
-    else if (unary_op_is_arithmetic(node->op)) {
+    } else if (unary_op_is_arithmetic(node->op)) {
         if (expr != LiteralType_Integer) {
             report_type_expectation(checker, "Unary operator type mismatch", (Node*) node->expr, LiteralType_Integer, expr);
             return 0;
         }
         return LiteralType_Integer;
-    }
-    else {
+    } else {
         error(checker->logger, STR_FMT "\n    Unary operator '%s' is not supported\n", STR_ARG(checker->tree.tokens.name), unary_op_repr(node->op));
         int start = (int) checker->tree.tokens.source_offsets[node->base.start];
         int end   = (int) checker->tree.tokens.source_offsets[node->base.end];

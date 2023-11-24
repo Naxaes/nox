@@ -22,6 +22,15 @@ TEST(ArithmeticTest, Integer) {
     ASSERT_EQ(result.result, 1);
 }
 
+TEST(ArithmeticTest, Negate) {
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
+    Str source = STR("-1");
+
+    InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
+    ASSERT_EQ(result.error,   0);
+    ASSERT_EQ(result.result, -1);
+}
+
 TEST(ArithmeticTest, Add) {
     Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("1 + 5");

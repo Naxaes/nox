@@ -90,7 +90,7 @@ static int sort_nodes_by_fun_decl(Node** nodes, int count) {
     for (int i = 0; i < count; ++i) {
         if (nodes[i]->kind == NodeKind_FunDecl) {
             for (int j = i; j > fun_count; --j) {
-                if (nodes[j - 1]->kind == NodeKind_FunDecl) {
+                if (nodes[j - 1]->kind != NodeKind_FunDecl) {
                     Node* temp = nodes[j];
                     nodes[j] = nodes[j - 1];
                     nodes[j - 1] = temp;
@@ -136,7 +136,7 @@ static Node* string(Parser* parser);
 static Node* identifier(Parser*);
 static Node* group(Parser*);
 
-static Node* not_(Parser*);
+static Node* unary(Parser*);
 
 static Node* binary(Parser* parser, Node* left);
 static Node* call(Parser* parser, Node* left);
@@ -172,7 +172,7 @@ ParseRule rules[36] = {
         [Token_Real]                = { real,         NULL,         Precedence_None},
         [Token_String]              = { string,       NULL,         Precedence_None},
         [Token_Identifier]          = { identifier,   NULL,         Precedence_None},
-        [Token_Minus]               = { NULL,         binary,       Precedence_Term},
+        [Token_Minus]               = { unary,        binary,       Precedence_Term},
         [Token_Plus]                = { NULL,         binary,       Precedence_Term},
         [Token_Asterisk]            = { NULL,         binary,       Precedence_Factor},
         [Token_Slash]               = { NULL,         binary,       Precedence_Factor},
@@ -187,9 +187,9 @@ ParseRule rules[36] = {
         [Token_Equal]               = { NULL,         NULL,         Precedence_None},
         [Token_Colon]               = { NULL,         NULL,         Precedence_None},
         [Token_Colon_Equal]         = { NULL,         NULL,         Precedence_None},
-        [Token_True]                = { true_,        NULL,         Precedence_Factor},
-        [Token_False]               = { false_,       NULL,         Precedence_Factor},
-        [Token_Not]                 = { not_,         NULL,         Precedence_Unary},
+        [Token_True]                = { true_,        NULL,         Precedence_None},
+        [Token_False]               = { false_,       NULL,         Precedence_None},
+        [Token_Not]                 = { unary,        NULL,         Precedence_Unary},
         [Token_And]                 = { NULL,         binary,       Precedence_And},
         [Token_Or]                  = { NULL,         binary,       Precedence_Or},
         [Token_If]                  = { NULL,         NULL,         Precedence_None},
@@ -313,9 +313,20 @@ static Node* identifier(Parser* parser) {
     return add_node(parser, node_identifier(ident));
 }
 
-static Node* not_(Parser* parser) {
-    assert(current(parser) == Token_Not && "Expected 'not'");
+
+static Node* unary(Parser* parser) {
+    Token token = current(parser);
+    assert((
+        ((token_group(token) & TokenGroup_Arithmetic_Operator) == TokenGroup_Arithmetic_Operator) ||
+        ((token_group(token) & TokenGroup_Logical_Operator)    == TokenGroup_Logical_Operator)
+    ) && "Expected unary operator");
     TokenIndex start = parser->token_index;
+
+    static const UnaryOp unary_op_map[] = {
+        [Token_Minus] = UnaryOp_Neg,
+        [Token_Not]   = UnaryOp_Not,
+    };
+    UnaryOp op = unary_op_map[token];
 
     advance(parser);
     Node* expr = expression(parser);
@@ -325,7 +336,7 @@ static Node* not_(Parser* parser) {
     NodeUnary unary = {
         node_base_unary(start, expr->base.end),
         .expr = expr,
-        .op = UnaryOp_Not,
+        .op = op,
     };
     return add_node(parser, node_unary(unary));
 }
@@ -333,9 +344,9 @@ static Node* not_(Parser* parser) {
 static Node* binary(Parser* parser, Node* left) {
     Token token = current(parser);
     assert((
-        ((token_group(token) & TokenGroup_Binary_Arithmetic_Operator) == TokenGroup_Binary_Arithmetic_Operator) ||
-        ((token_group(token) & TokenGroup_Binary_Comparison_Operator) == TokenGroup_Binary_Comparison_Operator) ||
-        ((token_group(token) & TokenGroup_Binary_Logical_Operator)    == TokenGroup_Binary_Logical_Operator)
+       ((token_group(token) & TokenGroup_Arithmetic_Operator) == TokenGroup_Arithmetic_Operator) ||
+       ((token_group(token) & TokenGroup_Comparison_Operator) == TokenGroup_Comparison_Operator) ||
+       ((token_group(token) & TokenGroup_Logical_Operator) == TokenGroup_Logical_Operator)
     ) && "Expected binary operator");
     TokenIndex start = parser->token_index;
 
@@ -864,7 +875,6 @@ static Node* statement(Parser* parser) {
         case Token_Plus:
         case Token_Asterisk:
         case Token_Equal:
-        case Token_Minus:
         case Token_Slash:
         case Token_Percent:
         case Token_Less:
@@ -883,7 +893,7 @@ static Node* statement(Parser* parser) {
         case Token_Or:
         case Token_Else:
         case Token_Then: {
-            error(parser->logger, STR_FMT "\n    Unexpected token '%s'\n", lexer_repr_of(parser->tokens, parser->token_index));
+            error(parser->logger, STR_FMT "\n    Unexpected token '%s'\n", STR_ARG(parser->tokens.name), lexer_repr_of(parser->tokens, parser->token_index));
             int start = (int) parser->tokens.source_offsets[parser->token_index];
             point_to_error(parser->logger, parser->tokens.source, start, start+1);
             return NULL;
@@ -902,11 +912,10 @@ static Node* statement(Parser* parser) {
         case Token_Number:
         case Token_Real:
         case Token_String:
+        case Token_Minus:
+        case Token_Not:
         case Token_Open_Paren: {
             return expression(parser);
-        } break;
-        case Token_Not: {
-            return not_(parser);
         } break;
         case Token_Open_Brace: {
             return block(parser);

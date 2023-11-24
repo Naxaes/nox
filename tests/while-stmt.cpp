@@ -14,7 +14,7 @@ extern "C" {
 
 
 TEST(WhileStmtTest, SimpleWhile) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("a := 0 while a < 69 { a = a + 1 } a");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -23,7 +23,7 @@ TEST(WhileStmtTest, SimpleWhile) {
 }
 
 TEST(WhileStmtTest, SimpleWhile2) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("a := 0 while a < 69 { print(\"loop\") a = a + 1 } a");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);

@@ -14,7 +14,7 @@ extern "C" {
 
 
 TEST(IfStmtTest, SimpleIfWithThen) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 then 69");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -23,7 +23,7 @@ TEST(IfStmtTest, SimpleIfWithThen) {
 }
 
 TEST(IfStmtTest, SimpleIfWithThenAndElse1) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 then 69 else 420");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -33,7 +33,7 @@ TEST(IfStmtTest, SimpleIfWithThenAndElse1) {
 
 
 TEST(IfStmtTest, SimpleIfWithThenAndElse2) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 then 69 else 420");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -43,7 +43,7 @@ TEST(IfStmtTest, SimpleIfWithThenAndElse2) {
 
 
 TEST(IfStmtTest, SimpleIfWithThenAndElseIfAndElse1) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 then 69 else if 2 == 2 then 420 else 1337");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -52,7 +52,7 @@ TEST(IfStmtTest, SimpleIfWithThenAndElseIfAndElse1) {
 }
 
 TEST(IfStmtTest, SimpleIfWithThenAndElseIfAndElse2) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 then 69 else if 2 == 2 then 420 else 1337");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -61,7 +61,7 @@ TEST(IfStmtTest, SimpleIfWithThenAndElseIfAndElse2) {
 }
 
 TEST(IfStmtTest, SimpleIfWithThenAndElseIfAndElse3) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 then 69 else if 2 == 3 then 420 else 1337");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -70,7 +70,7 @@ TEST(IfStmtTest, SimpleIfWithThenAndElseIfAndElse3) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlock) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 { 69 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -79,7 +79,7 @@ TEST(IfStmtTest, SimpleIfWithBlock) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElse1) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 { 69 } else { 420 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -88,7 +88,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElse1) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElse2) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 { 69 } else { 420 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -97,7 +97,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElse2) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIf1) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 { 69 } else if 2 == 2 { 420 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -106,7 +106,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElseIf1) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIf2) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 { 69 } else if 2 == 2 { 420 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -115,7 +115,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElseIf2) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIf3) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 { 69 } else if 2 == 2 { 420 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -124,7 +124,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElseIf3) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIfAndElse1) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 1 { 69 } else if 2 == 2 { 420 } else { 1337 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -133,7 +133,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElseIfAndElse1) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIfAndElse2) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 { 69 } else if 2 == 2 { 420 } else { 1337 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
@@ -142,7 +142,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElseIfAndElse2) {
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIfAndElse3) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_DEBUG, stderr);
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
     Str source = STR("if 1 == 2 { 69 } else if 2 == 3 { 420 } else { 1337 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);

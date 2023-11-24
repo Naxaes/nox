@@ -137,7 +137,7 @@ TEST(FunctionDeclTest, NestedWithParameter) {
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
     ASSERT_EQ(result.error,  0);
-    ASSERT_EQ(result.result,69);
+    ASSERT_EQ(result.result, 69);
 }
 
 TEST(FunctionDeclTest, NestedWithMultipleParameters) {
@@ -146,14 +146,23 @@ TEST(FunctionDeclTest, NestedWithMultipleParameters) {
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
     ASSERT_EQ(result.error,  0);
-    ASSERT_EQ(result.result,69);
+    ASSERT_EQ(result.result, 69);
 }
 
 TEST(FunctionDeclTest, DeferredFunDecl) {
     Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
-    Str source = STR(" main() fun main() int { return nested(69) } fun nested(a: int) int { return a }");
+    Str source = STR("main() fun main() int { return 69 }");
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
     ASSERT_EQ(result.error,  0);
-    ASSERT_EQ(result.result,69);
+    ASSERT_EQ(result.result, 69);
+}
+
+TEST(FunctionDeclTest, DeferredNestedFunDecl) {
+    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
+    Str source = STR("main() fun main() int { return nested(69) } fun nested(a: int) int { return a }");
+
+    InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
+    ASSERT_EQ(result.error,  0);
+    ASSERT_EQ(result.result, 69);
 }
