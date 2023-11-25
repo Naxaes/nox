@@ -7,14 +7,30 @@
 
 <block>         ::= "{" <statement> [<statement>] "}"
 
-<statement>     ::= <fn-decl> | <expression> | <assign>
+<statement>     ::= <block>             :: "{"
+                  | <fn-decl>           :: "fun"
+                  | <struct-decl>       :: "struct"
+                  | <expression>        :: "a-z" | "A-Z" | "_" | "0-9" | "(" | '"' | "true" | "false"
+                  | <assign>            :: "a-z" | "A-Z" | "_"
+                  | <return>            :: "return"
+                  | <break>             :: "break"
+                  | <continue>          :: "continue"
+                  | <import>            :: "import"
+                    
+<expression>    ::= <identifier>        :: "a-z" | "A-Z" | "_"
+                  | <literal>           :: "0-9" | '"' | "true" | "false"
+                  | <call>              :: "a-z" | "A-Z" | "_"
+                  | <binary>            :: "a-z" | "A-Z" | "_"
+                  | <if>                :: "if"
+                  | <while>             :: "while"
+                  | <for>               :: "for"
+
 
 <fn-decl>       ::= "fun" <identifier> "(" [<params>] ")" [<type>] <block>
 <params>        ::= <identifier> ":" <type> ["," <params>]
 
-<assign>    ::= <identifier> "=" <expression>
+<assign>        ::= <identifier> "=" <expression>
 
-<expression>    ::= <identifier> | <literal> | <call> | <binary>
 
 <call>          ::= <identifier> "(" [<args>] ")"
 <args>          ::= <expression> ["," <args>]

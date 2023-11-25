@@ -45,6 +45,8 @@ set(SOURCES
     ${SRC_DIR}/parser/visitor.c
     ${SRC_DIR}/parser/ast_printer.c
     ${SRC_DIR}/parser/node.c
+    ${SRC_DIR}/parser/tree.c
+
 )
 
 add_executable(main ${SOURCES} main.cpp)

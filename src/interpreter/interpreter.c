@@ -199,6 +199,12 @@ InterpreterResult interpret(Bytecode code) {
                 u64* r0 = reg(interpreter, src);
                 interpreter.stack[*bp + dst] = *r0;
             } break;
+            case Instruction_StoreAddr: {
+                Register dst = instruction.reg.dst;
+                Register src = instruction.reg.src;
+
+                interpreter.stack[*bp + dst] = *bp + src;
+            } break;
             case Instruction_Load: {
                 Register dst = instruction.reg.dst;
                 Register src = instruction.reg.src;

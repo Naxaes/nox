@@ -111,16 +111,7 @@ TEST(IfStmtTest, SimpleIfWithBlockAndElseIf2) {
 
     InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
     ASSERT_EQ(result.error,  0);
-    ASSERT_EQ(result.result, 69);
-}
-
-TEST(IfStmtTest, SimpleIfWithBlockAndElseIf3) {
-    Logger logger = logger_make_with_file("test", LOG_LEVEL_ERROR, stderr);
-    Str source = STR("if 1 == 2 { 69 } else if 2 == 2 { 420 }");
-
-    InterpreterResult result = run_from_source(STR("<test>"), source, &logger);
-    ASSERT_EQ(result.error,  0);
-    ASSERT_EQ(result.result, 0);
+    ASSERT_EQ(result.result, 420);
 }
 
 TEST(IfStmtTest, SimpleIfWithBlockAndElseIfAndElse1) {

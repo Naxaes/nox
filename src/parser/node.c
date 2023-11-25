@@ -2,7 +2,7 @@
 
 
 const char* literal_type_name(LiteralType type) {
-#define X(upper, lower, repr) case LiteralType_##upper: return #lower;
+#define X(upper, lower, repr, size) case LiteralType_##upper: return #lower;
     switch (type) {
         ALL_LITERAL_TYPES(X)
     }
@@ -10,7 +10,7 @@ const char* literal_type_name(LiteralType type) {
 }
 
 const char* literal_type_repr(LiteralType type) {
-#define X(upper, lower, repr) case LiteralType_##upper: return #repr;
+#define X(upper, lower, repr, size) case LiteralType_##upper: return #repr;
     switch (type) {
         ALL_LITERAL_TYPES(X)
     }

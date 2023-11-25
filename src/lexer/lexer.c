@@ -216,7 +216,7 @@ static inline int add_token_with_identifier(Lexer* lexer, const char* current, T
 }
 
 static Token token_from_string(Str string) {
-    static_assert(TOKEN_LAST == 35, "Expected to handle 35 tokens. Token has been updated!");
+    static_assert(TOKEN_LAST == 37, "Expected to handle this many tokens. Token has been updated!");
     if (str_equals(string, STR("true")))   return Token_True;
     if (str_equals(string, STR("false")))  return Token_False;
     if (str_equals(string, STR("not")))    return Token_Not;
@@ -230,6 +230,7 @@ static Token token_from_string(Str string) {
     if (str_equals(string, STR("fun")))    return Token_Fun;
     if (str_equals(string, STR("while")))  return Token_While;
     if (str_equals(string, STR("return"))) return Token_Return;
+    if (str_equals(string, STR("struct"))) return Token_Struct;
 
     return Token_Identifier;
 }
@@ -346,6 +347,9 @@ TokenArray lexer_lex(Str name, Str source, Logger* logger) {
             } break;
             case ',': {
                 current += add_single_token(&lexer, current, Token_Comma);
+            } break;
+            case '.': {
+                current += add_single_token(&lexer, current, Token_Dot);
             } break;
             case '"': {
                 int is_valid = 0;

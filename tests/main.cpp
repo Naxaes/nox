@@ -5,6 +5,7 @@
 #include "if-stmt.cpp"
 #include "while-stmt.cpp"
 #include "functions.cpp"
+#include "struct.cpp"
 
 
 int main(int argc, char **argv)

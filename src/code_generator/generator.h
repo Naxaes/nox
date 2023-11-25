@@ -28,6 +28,7 @@
     X(And)               \
     X(Or)                \
     X(Store)             \
+    X(StoreAddr)         \
     X(Load)              \
     X(Jmp)               \
     X(JmpZero)           \

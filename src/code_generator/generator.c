@@ -24,12 +24,20 @@ typedef struct {
 } DeferredBlock;
 
 typedef struct {
+    Node* node;
+    size_t instruction_start;
+    size_t instruction_end;
+} DebugInfo;
+
+typedef struct {
     Visitor visitors;
     TypedAst ast;
     
     Instruction* instructions;
     size_t       count;
     Register     current_register;
+
+    DebugInfo* debug_info;
 
     Instruction** return_statements;
     int           return_statements_count;
@@ -48,6 +56,7 @@ Bytecode generator_to_bytecode(Generator* generator) {
     }
     dealloc(generator->return_statements);
     dealloc(generator->deferred_blocks);
+    dealloc(generator->debug_info);
 
     return (Bytecode) { generator->instructions, generator->count };
 }
@@ -105,7 +114,7 @@ Register store(Generator* generator, Register dst, Register src) {
             .reg.dst = dst,
             .reg.src = src,
     };
-    return dst;
+    return src;
 }
 
 Register load(Generator* generator, Register dst, Register src) {
@@ -169,10 +178,31 @@ static Local* find_local(const Generator* generator, const char* name) {
     while (current != NULL) {
         for (i32 i = 0; i < (i32) current->count; ++i) {
             Local* local = current->locals + i;
-            assert((local->decl->kind == NodeKind_VarDecl || local->decl->kind == NodeKind_FunDecl || local->decl->kind == NodeKind_FunParam) && "Invalid node kind");
+            assert(
+                (local->decl->kind == NodeKind_VarDecl || local->decl->kind == NodeKind_FunDecl || local->decl->kind == NodeKind_FunParam || local->decl->kind == NodeKind_Struct)
+                && "Invalid node kind"
+            );
 
-            if (local->decl->var_decl.name == name) {
-                return local;
+            switch (local->decl->kind) {
+                case NodeKind_VarDecl:
+                    if (local->decl->var_decl.name == name) {
+                        return local;
+                    }
+                    break;
+                case NodeKind_FunDecl:
+                    if (local->decl->fun_decl.name == name)
+                        return local;
+                    break;
+                case NodeKind_FunParam:
+                    if (local->decl->fun_param.name == name)
+                        return local;
+                    break;
+                case NodeKind_Struct:
+                    if (local->decl->struct_decl.name == name)
+                        return local;
+                    break;
+                default:
+                    assert(0 && "Invalid node kind");
             }
         }
         current = (current->parent == -1) ? NULL : generator->ast.block + current->parent;
@@ -315,6 +345,7 @@ Register generate_if_stmt(Generator* generator, const NodeIf* if_stmt) {
     Register condition = (Register) visit(generator, if_stmt->condition);
     register_free(generator);  // Consume the expression register
 
+    Register start_register = generator->current_register;
     Instruction* jump_to_else = jmp_zero(generator, condition);
     visit(generator, (Node*) if_stmt->then_block);
 
@@ -322,8 +353,11 @@ Register generate_if_stmt(Generator* generator, const NodeIf* if_stmt) {
         Instruction* jump_to_end = jmp(generator);
         jump_to_else->jmp.label = (i32) generator->count;
 
+        Register current = generator->current_register;
+        generator->current_register = start_register;
         visit(generator, (Node*) if_stmt->else_block);
         jump_to_end->jmp.label = (i32) generator->count;
+        generator->current_register = current;
     } else {
         jump_to_else->jmp.label = (i32) generator->count;
     }
@@ -362,6 +396,29 @@ Register generate_while_stmt(Generator* generator, const NodeWhile* while_stmt) 
         jump_to_else->jmp.label = (i32) generator->count;
     }
     return -1;
+}
+
+// TODO: FIX
+Register generate_access(Generator* generator, const NodeAccess* node) {
+    Local* variable = find_local(generator, node->left->identifier.name);
+    assert(variable->decl->kind == NodeKind_VarDecl && "Invalid node kind");
+
+    NodeId object_id = node_id(&generator->ast.tree, node->left);
+    TypeId type = generator->ast.types[object_id];
+    TypeInfo type_info = generator->ast.type_info[type];
+
+    Local* struct_ = find_local(generator, type_info.name);
+    assert(struct_->decl->kind == NodeKind_Struct && "Invalid node kind");
+    NodeStruct* struct_decl = &struct_->decl->struct_decl;
+
+    for (i32 i = 0; i < struct_decl->count; ++i) {
+        NodeStructField* field = (NodeStructField*) struct_decl->nodes[i];
+        if (field->name == node->right->identifier.name) {
+            Register dst = register_alloc(generator);
+            return load(generator, dst, variable->decl->var_decl.decl_offset + field->offset);
+        }
+    }
+    assert(0 && "Unknown field");
 }
 
 Register generate_call(Generator* generator, const NodeCall* fn_call) {
@@ -415,7 +472,7 @@ Register generate_call(Generator* generator, const NodeCall* fn_call) {
     if (fn_call->count > 0)
         pop(generator, REG_BASE);
 
-    // NOTE(ted): Iterating backwards so we find the last function declaration.
+    // NOTE(ted): Iterating backwards, so we find the last function declaration.
     for (int i = (int)generator->deferred_blocks_count-1; i >= 0; --i) {
         DeferredBlock* deferred = generator->deferred_blocks + i;
         if (deferred->name == fn_call->name) {
@@ -467,6 +524,7 @@ Register generate_deferred(Generator* generator, const NodeFunDecl* node) {
     // Allocate space for parameters
     bin_op(generator, Instruction_Add_Imm, SP, node->param_count);
     // Allocate space for locals
+    // TODO: This is not correct, we need to allocate space for locals of different sizes.
     bin_op(generator, Instruction_Add_Imm, SP, node->body->decls);
 
     Block* current = generator->current;
@@ -525,6 +583,40 @@ Register generate_type(Generator* generator, const NodeType* node) {
     return -1;
 }
 
+Register generate_init_arg(Generator* generator, const NodeInitArg* node) {
+    Register dst = register_alloc(generator);
+    Register src = (Register) visit(generator, node->expr);
+    register_free(generator);
+    push(generator, src);
+    pop(generator, dst);
+    return dst;
+}
+
+Register generate_init(Generator* generator, const NodeInit* node) {
+    Register start = (Register) -1;
+    for (i32 i = 0; i < node->count; ++i) {
+        if (start == (Register) -1) {
+            start = (Register) visit(generator, (Node*) node->args[i]);
+        } else {
+            visit(generator, (Node*) node->args[i]);
+            register_free(generator);
+        }
+    }
+    return start;
+}
+
+Register generate_struct_field(Generator* generator, const NodeStructField* node) {
+    (void) generator;
+    (void) node;
+    return -1;
+}
+
+Register generate_struct_decl(Generator* generator, const NodeStruct* node) {
+    (void) generator;
+    (void) node;
+    return -1;
+}
+
 Register generate_module(Generator* generator, const NodeModule* node) {
     Block* current = generator->current;
     generator->current = generator->ast.block;
@@ -552,6 +644,7 @@ Bytecode generate_code(TypedAst ast) {
         .count = 0,
         .fun_block = 0,
         .current_register = REG_BASE,
+        .debug_info = alloc(sizeof(DebugInfo) * 4096),
         .return_statements = alloc(sizeof(Instruction*) * 1024),
         .return_statements_count = 0,
         .current = ast.block,
@@ -563,10 +656,12 @@ Bytecode generate_code(TypedAst ast) {
 
     if (node->kind == NodeKind_Module) {
         // Allocate space for locals
+        // TODO: This is not correct, we need to allocate space for locals of different sizes.
         bin_op(&generator, Instruction_Add_Imm, SP, node->module.global_count);
     }
     visit(&generator, node);
     if (node->kind == NodeKind_Module) {
+        // TODO: This is not correct, we need to allocate space for locals of different sizes.
         bin_op(&generator, Instruction_Add_Imm, SP, -node->module.global_count);
     }
     mov_reg(&generator, REG_BASE, generator.current_register-1);

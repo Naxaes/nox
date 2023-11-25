@@ -15,7 +15,7 @@ typedef enum {
     X(Number,         number,        0,         TokenGroup_Literal)                            \
     X(Real,           real,          0,         TokenGroup_Literal)                            \
     X(String,         string,        0,         TokenGroup_Literal)                            \
-    X(Identifier,     identifier,    0,         TokenGroup_Literal)                               \
+    X(Identifier,     identifier,    0,         TokenGroup_None)                               \
     X(Plus,           plus,          "+",       TokenGroup_Arithmetic_Operator)                \
     X(Minus,          minus,         "-",       TokenGroup_Arithmetic_Operator)                \
     X(Asterisk,       asterisk,      "*",       TokenGroup_Arithmetic_Operator)                \
@@ -31,6 +31,7 @@ typedef enum {
     X(Equal,          equal,         "=",       TokenGroup_None)                               \
     X(Colon,          colon,         ":",       TokenGroup_None)                               \
     X(Colon_Equal,    colon_equal,   ":=",      TokenGroup_None)                               \
+    X(Dot,            dot,           ".",       TokenGroup_None)                               \
     X(True,           true,          "true",    TokenGroup_Keyword|TokenGroup_Literal)                            \
     X(False,          false,         "false",   TokenGroup_Keyword|TokenGroup_Literal)                            \
     X(Not,            not,           "not",     TokenGroup_Keyword|TokenGroup_Logical_Operator) \
@@ -42,6 +43,7 @@ typedef enum {
     X(While,          while,         "while",   TokenGroup_Keyword)                            \
     X(Fun,            fun,           "fun",     TokenGroup_Keyword)                            \
     X(Return,         return,        "return",  TokenGroup_Keyword)                            \
+    X(Struct,         struct,        "struct",  TokenGroup_Keyword)                            \
     X(Open_Paren,     open_paren,    "(",       TokenGroup_None)                               \
     X(Close_Paren,    close_paren,   ")",       TokenGroup_None)                               \
     X(Open_Brace,     open_brace,    "{",       TokenGroup_None)                               \

@@ -3,16 +3,17 @@
 
 
 #define ALL_LITERAL_TYPES(X) \
-    X(Void,    void,     void)   \
-    X(Boolean, boolean,  bool)   \
-    X(Integer, integer,  int)    \
-    X(Real,    real,     real)   \
-    X(String,  string,   str)    \
+    X(Void,    void,     void,  0)   \
+    X(Boolean, boolean,  bool,  8)   \
+    X(Integer, integer,  int,   8)    \
+    X(Real,    real,     real,  8)   \
+    X(String,  string,   str,   8)    \
 
 
-#define X(upper, lower, repr) LiteralType_##upper,
+#define X(upper, lower, repr, size) LiteralType_##upper,
 typedef enum {
     ALL_LITERAL_TYPES(X)
+    LITERAL_TYPE_LAST = LiteralType_String,
 } LiteralType;
 #undef X
 const char* literal_type_name(LiteralType type);
@@ -115,6 +116,10 @@ typedef enum {
         i32    count;                                                   \
         Node** args;                                                    \
     )                                                                   \
+    X(Access, access, NodeFlag_Is_Expression,                           \
+        Node* left;                                                     \
+        Node* right;                                                    \
+    )                                                                   \
     X(Type, type, NodeFlag_None,                                        \
         const char* name;                                               \
     )                                                                   \
@@ -165,6 +170,29 @@ typedef enum {
         Node* condition;                                                \
         NodeBlock* then_block;                                          \
         NodeBlock* else_block;                                          \
+    )                                                                   \
+    X(InitArg, init_arg, NodeFlag_None,                                 \
+        const char* name;                                               \
+        int    offset;                                                  \
+        Node*  expr;                                                    \
+    )                                                                   \
+    X(Init, init, NodeFlag_Is_Expression,                               \
+        const char* name;                                               \
+        int    count;                                                   \
+        NodeInitArg** args;                                             \
+    )                                                                   \
+    X(StructField, struct_field, NodeFlag_None,                         \
+        const char* name;                                               \
+        int   offset;                                                   \
+        Node* type;                                                     \
+        Node* expr;                                                     \
+    )                                                                   \
+    X(Struct, struct_decl, NodeFlag_None,                               \
+        i32    id;                                                      \
+        i32    parent;                                                  \
+        int    count;                                                   \
+        Node** nodes;                                                   \
+        const char* name;                                               \
     )                                                                   \
     X(Module, module, NodeFlag_None,                                    \
         Node** stmts;                                                   \

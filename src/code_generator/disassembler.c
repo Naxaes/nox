@@ -102,6 +102,9 @@ void disassemble_instruction(Instruction instruction, FILE* output) {
         case Instruction_Store: {
             fprintf(output, "%-6s %-6lld %-10s", "Store", instruction.reg.dst, reg(instruction.reg.src));
         } break;
+        case Instruction_StoreAddr:
+            fprintf(output, "%-6s [%-4s] %-10s", "Store", reg(instruction.reg.dst), reg(instruction.reg.src));
+        break;
         case Instruction_Load: {
             fprintf(output, "%-6s %-6s %-10lld", "Load", reg(instruction.reg.dst), instruction.reg.src);
         } break;
