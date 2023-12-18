@@ -25,21 +25,21 @@ llvm-objcopy -I binary -O elf64-x86-64 --rename-section=.data=.text,code jit.bin
 ```
 [DEBUG] (Main) ./nox/src/lib.c:61: Source of 'examples/while-loop.nox':
 """
-fun test() int {
-    a := 10
-    while a < 20 {
-        a = a + 1
-    }
-    return a
-}
-
-x := test()
+1 |  fun test() int {
+2 |      a := 10
+3 |      while a < 20 {
+4 |          a = a + 1
+5 |      }
+6 |      return a
+7 |  }
+8 |  
+9 |  x := test()
 """
 
 [DEBUG] (Main) ./nox/src/lib.c:61: AST:
 Module: id=0 @ examples/while-loop.nox:1:1
   ├─ decl0  FunDecl: id=17, repr='fun', name='test' @ examples/while-loop.nox:1:1
-  │         └─ body   FunBody: id=2, parent='0', block_id='1' decls='1308689936' @ examples/while-loop.nox:1:16
+  │         └─ body   FunBody: id=2, parent='0', block_id='1' decls='1' @ examples/while-loop.nox:1:16
   │                   ├─ stmt0  VarDecl: id=4, name='a' @ examples/while-loop.nox:2:5
   │                   │         └─ expr   Literal: id=3, repr='10', type='integer' @ examples/while-loop.nox:2:10
   │                   ├─ stmt1  While: id=14 @ examples/while-loop.nox:3:5
