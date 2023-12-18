@@ -1,6 +1,6 @@
 #pragma once
 
-#include "memory.h"
+#include "os/memory.h"
 #include "types.h"
 #include "type_checker/checker.h"
 

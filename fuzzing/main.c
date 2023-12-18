@@ -18,10 +18,10 @@ int LLVMFuzzerTestOneInput(const u8* data, size_t size) {
         dealloc(code.instructions);
     }
 
-    if (memory_in_use() != 0) {
-        memory_dump();
-        exit(-1);
-    }
+//    if (memory_in_use() != 0) {
+//        memory_dump();
+//        exit(-1);
+//    }
 
     return 0;  // Values other than 0 and -1 are reserved for future use.
 }

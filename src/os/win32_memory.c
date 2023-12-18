@@ -25,4 +25,22 @@ void* memory_map_executable(void* code, size_t size) {
     return memory;
 }
 
-void memory_map_free(void* code, size_t size);
+void memory_map_free(void* code, size_t size) {
+    VirtualFree(code, 0, MEM_RELEASE);
+}
+
+
+void* alloc_(const char* file, int line, size_t size) {
+    return malloc(size);
+}
+
+void dealloc_(const char* file, int line, void* ptr) {
+    free(ptr);
+}
+
+size_t memory_in_use(void) {
+    return 0;
+}
+
+void memory_dump(void) {
+}

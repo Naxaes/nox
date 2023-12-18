@@ -26,13 +26,13 @@ set(SOURCES
     ../src/utf8.c
     ../src/error.c
     ../src/lib.c
-    ../src/memory.c
     ../src/jit_compiler/jit.c
     ../src/os/memory.c
     ../src/transpiler/c_transpiler.c
     ../src/parser/visitor.c
     ../src/parser/ast_printer.c
     ../src/parser/node.c
+    ../src/parser/tree.c
 )
 add_executable(fuzzing main.c ${SOURCES})
 target_include_directories(fuzzing PRIVATE ${PROJECT_SOURCE_DIR}/../src)

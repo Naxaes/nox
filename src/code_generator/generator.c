@@ -173,6 +173,13 @@ void pop(Generator* generator, Register dst) {
     };
 }
 
+static TypeInfo type_info_of_node(const TypedAst* ast, const Node* node) {
+    NodeId object_id = node_id(&ast->tree, node);
+    TypeId type = ast->types[object_id];
+    TypeInfo type_info = ast->type_info[type];
+    return type_info;
+}
+
 static Local* find_local(const Generator* generator, const char* name) {
     Block* current = generator->current;
     while (current != NULL) {
@@ -401,11 +408,13 @@ Register generate_while_stmt(Generator* generator, const NodeWhile* while_stmt) 
 // TODO: FIX
 Register generate_access(Generator* generator, const NodeAccess* node) {
     Local* variable = find_local(generator, node->left->identifier.name);
-    assert(variable->decl->kind == NodeKind_VarDecl && "Invalid node kind");
 
-    NodeId object_id = node_id(&generator->ast.tree, node->left);
-    TypeId type = generator->ast.types[object_id];
-    TypeInfo type_info = generator->ast.type_info[type];
+    assert(
+        (variable->decl->kind == NodeKind_VarDecl || variable->decl->kind == NodeKind_FunParam)
+        && "Invalid node kind"
+    );
+
+    TypeInfo type_info = type_info_of_node(&generator->ast, node->left);
 
     Local* struct_ = find_local(generator, type_info.name);
     assert(struct_->decl->kind == NodeKind_Struct && "Invalid node kind");
@@ -521,30 +530,45 @@ Register generate_deferred(Generator* generator, const NodeFunDecl* node) {
     push(generator, BP);
     mov_reg(generator, BP, SP);
 
+    /*
+    int total_param_size = 0;
+    for (int i = 0; i < node->param_count; ++i) {
+        NodeFunParam* param = node->params[i];
+        TypeInfo type_info = type_info_of_node(&generator->ast, (Node*) param);
+        total_param_size += type_info.size;
+    }
+
     // Allocate space for parameters
+    bin_op(generator, Instruction_Add_Imm, SP, (total_param_size+8) / 8);
+    */
     bin_op(generator, Instruction_Add_Imm, SP, node->param_count);
+
+
     // Allocate space for locals
     // TODO: This is not correct, we need to allocate space for locals of different sizes.
-    bin_op(generator, Instruction_Add_Imm, SP, node->body->decls);
+    bin_op(generator, Instruction_Add_Imm, SP, node->body->decl_count);
 
     Block* current = generator->current;
     generator->current = generator->ast.block + node->body->id;
 
-    for (i32 i = 0; i < node->param_count; ++i) {
+    for (int i = 0; i < node->param_count; ++i) {
         NodeFunParam* param = node->params[i];
         Local* local = find_local(generator, param->name);
         assert(local->decl->kind == NodeKind_FunParam && "Invalid node kind");
         store(generator, local->decl->fun_param.offset, REG_BASE + i);
     }
 
-    for (i32 i = 0; i < node->body->count; ++i) {
+    for (int i = 0; i < node->body->decl_count; ++i) {
+        visit(generator, node->body->decls[i]);
+    }
+    for (int i = 0; i < node->body->count; ++i) {
         visit(generator, node->body->nodes[i]);
     }
     generator->current = current;
 
     for (int i = 0; i < generator->return_statements_count; ++i) {
         Instruction* return_statement = generator->return_statements[i];
-        return_statement->jmp.label = (i32) generator->count;
+        return_statement->jmp.label = (int) generator->count;
     }
     generator->return_statements_count = 0;
 

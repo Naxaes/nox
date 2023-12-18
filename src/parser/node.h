@@ -137,13 +137,16 @@ typedef enum {
         i32    parent;                                                  \
         i32    count;                                                   \
         Node** nodes;                                                   \
+        i32    decl_count;                                              \
+        Node** decls;                                                   \
     )                                                                   \
     X(FunBody, fun_body, NodeFlag_None,                                 \
         i32    id;                                                      \
         i32    parent;                                                  \
         i32    count;                                                   \
         Node** nodes;                                                   \
-        i32    decls;                                                   \
+        i32    decl_count;                                              \
+        Node** decls;                                                   \
     )                                                                   \
     X(FunParam, fun_param, NodeFlag_Is_Statement,                       \
         const char* name;                                               \

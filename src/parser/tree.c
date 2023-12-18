@@ -3,7 +3,7 @@
 #include "parser.h"
 #include "error.h"
 #include "assert.h"
-#include "memory.h"
+#include "os/memory.h"
 
 
 GrammarTree parser_to_ast(Parser* parser, Node* start) {
@@ -23,8 +23,8 @@ void grammar_tree_free(GrammarTree ast) {
 }
 
 
-// Sorts the nodes in the stack by declaration order.
-// This is so we can visit function declarations before they are used.
+// Sorts the nodes to put either function declarations or struct declarations first,
+// while preserving the order of the other nodes.
 static int sort_nodes_by_decl(Node** nodes, int count) {
     int fun_count = 0;
     for (int i = 0; i < count; ++i) {
@@ -598,10 +598,14 @@ static Node* block(Parser* parser) {
     size_t count = parser->stack_count - snapshot;
     Node** statements = stack_restore(parser, snapshot);
 
+    int decl_count = sort_nodes_by_decl(statements, count);
+
     TokenIndex stop = parser->token_index;
     parser->current_block->base = node_base_block(start, stop);
-    parser->current_block->nodes = statements;
-    parser->current_block->count = (i32) count;
+    parser->current_block->nodes = statements + decl_count;
+    parser->current_block->count = (i32) count - (i32) decl_count;
+    parser->current_block->decls = statements;
+    parser->current_block->decl_count = decl_count;
 
     parser->current_block = previous_block;
     return (Node*) block;
@@ -648,12 +652,14 @@ static Node* fun_body(Parser* parser) {
     size_t count = parser->stack_count - snapshot;
     Node** statements = stack_restore(parser, snapshot);
 
-    body->decls = parser->current_decl_count - previous_decl_count;
+    int decl_count = sort_nodes_by_decl(statements, count);
 
     TokenIndex stop = parser->token_index;
-    parser->current_block->base = node_base_fun_body(start, stop);
-    parser->current_block->nodes = statements;
-    parser->current_block->count = (i32) count;
+    parser->current_block->base = node_base_block(start, stop);
+    parser->current_block->nodes = statements;// + decl_count;
+    parser->current_block->count = (i32) count;// - (i32) decl_count;
+    parser->current_block->decls = statements;
+    parser->current_block->decl_count = decl_count;
 
     parser->current_block = previous_block;
     parser->current_decl_count = previous_decl_count;

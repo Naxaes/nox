@@ -22,7 +22,7 @@ if(WIN32)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 elseif(UNIX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -pedantic -Wno-c11-extensions -Wno-gnu-binary-literal ")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g")# -fsanitize=fuzzer,address,undefined,leak,signed-integer-overflow")  # memory
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g")  # -fsanitize=fuzzer,address,undefined,leak,signed-integer-overflow")  # memory
     set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 endif()
 
@@ -40,7 +40,6 @@ set(SOURCES
     src/args.c
     src/utf8.c
     src/error.c
-    src/memory.c
     src/lib.c
     src/jit_compiler/jit.c
     src/os/memory.c

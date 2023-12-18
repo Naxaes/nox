@@ -131,7 +131,7 @@ Bytecode compile_from_file(Str path, Logger* logger) {
 InterpreterResult run_from_file(Str path, Logger* logger) {
     Str source = read_file(path.data);
 
-    if (str_is_empty(source)) {
+    if (str_is_invalid(source)) {
         error(logger, "Failed to read file\n");
         return (InterpreterResult) { 0, 1 };
     }

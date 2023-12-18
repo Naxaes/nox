@@ -10,6 +10,7 @@ typedef struct {
 
 #define STR(literal) ((Str) { sizeof(literal)-1, (literal) })
 #define STR_EMPTY ((Str) {0, NULL})
+#define STR_INVALID ((Str) {-1, NULL})
 
 #define STR_FMT "%.*s"
 #define STR_ARG(str) (int)(str).size, (str).data
@@ -17,6 +18,10 @@ typedef struct {
 
 static inline int str_is_empty(Str str) {
     return str.size == 0;
+}
+
+static inline int str_is_invalid(Str str) {
+    return str.size == (size_t) -1;
 }
 
 static inline u64 str_hash(Str str) {

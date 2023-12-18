@@ -1,7 +1,8 @@
 #include "checker.h"
 #include "error.h"
-#include "memory.h"
+#include "os/memory.h"
 #include "../parser/visitor.h"
+
 
 #include <stdio.h>
 #include <assert.h>

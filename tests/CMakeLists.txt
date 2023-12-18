@@ -37,7 +37,6 @@ set(SOURCES
     ${SRC_DIR}/args.c
     ${SRC_DIR}/utf8.c
     ${SRC_DIR}/error.c
-    ${SRC_DIR}/memory.c
     ${SRC_DIR}/lib.c
     ${SRC_DIR}/jit_compiler/jit.c
     ${SRC_DIR}/os/memory.c

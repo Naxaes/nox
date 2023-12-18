@@ -1,5 +1,5 @@
 #include "lexer.h"
-#include "memory.h"
+#include "os/memory.h"
 #include "str.h"
 #include "error.h"
 #include "utf8.h"

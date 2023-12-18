@@ -83,7 +83,7 @@ JittedFunction jit_compile_aarch64(Bytecode code) {
 }
 
 
-JitFunction jit_compile_x86_64(Bytecode code) {
+JittedFunction jit_compile_x86_64(Bytecode code) {
     u8* machine_code = alloc(code.size);
     size_t size = 0;
 
@@ -96,7 +96,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
 
                 if (val >= 1uLL << 32) {
                     fprintf(stderr, "[ERROR]: mov only supports 32-bit immediate\n");
-                    return NULL;
+                    return (JittedFunction) { .function = NULL, .size = 0 };
                 }
 
                 u8 inst[] = x86_64_mov_imm32(dst, val);
@@ -147,7 +147,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
             } break;
             default: {
                 fprintf(stderr, "[WARN]: Invalid instruction '%d'\n", instruction.type);
-                return NULL;
+                return (JittedFunction) { .function = NULL, .size = 0 };
             } break;
         }
     }
@@ -155,7 +155,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
     void* memory = memory_map_executable(machine_code, size * sizeof(*machine_code));
     if (memory == NULL)
         dealloc(machine_code);
-    return (JitFunction) memory;
+    return (JittedFunction) { .function = (JitFunction) memory, .size = size };
 }
 
 

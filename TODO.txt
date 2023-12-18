@@ -2,9 +2,3 @@
 * Change to three address code
 * Use custom allocators
 
-
-* Add support for real numbers
-* Add support for strings
-* Add support for arrays
-* Add imports
-* Add user-defined types

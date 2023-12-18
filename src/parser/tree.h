@@ -20,10 +20,10 @@ typedef struct {
 void grammar_tree_free(GrammarTree ast);
 GrammarTree parse(TokenArray tokens, Logger* logger);
 
-static inline Location node_location(const GrammarTree* ast, Node* node) {
+static inline Location node_location(const GrammarTree* ast, const Node* node) {
     return location_of(ast->tokens.source.data, ast->tokens.source_offsets[node->base.start]);
 }
 
-static inline NodeId node_id(const GrammarTree* ast, Node* node) {
+static inline NodeId node_id(const GrammarTree* ast, const Node* node) {
     return (NodeId) (node - ast->nodes);
 }
