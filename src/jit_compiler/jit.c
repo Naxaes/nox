@@ -172,8 +172,7 @@ JittedFunction jit_compile(Bytecode code, int output) {
     if (function.function == NULL)
         return function;
 #else
-    JitFunction function = NULL;
-    return NULL;
+    return (JittedFunction) { .function = NULL, .size = 0 };
 #endif
 
 #ifdef OUTPUT_JIT
