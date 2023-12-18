@@ -53,8 +53,6 @@ Module: id=0 @ examples/while-loop.nox:1:1
   │                   │                                       └─ right  Literal: id=12, repr='1', type='integer' @ examples/while-loop.nox:4:17
   │                   └─ stmt2  Return: id=16, repr='return' @ examples/while-loop.nox:6:5
   │                             └─ expr   Identifier: id=15, repr='a' @ examples/while-loop.nox:6:12
-  └─ decl1  VarDecl: id=20, name='x' @ examples/while-loop.nox:9:1
-  │         └─ expr   FunCall: id=19, name='test' @ examples/while-loop.nox:9:6
   └─ stmt0  VarDecl: id=20, name='x' @ examples/while-loop.nox:9:1
             └─ expr   FunCall: id=19, name='test' @ examples/while-loop.nox:9:6
 
