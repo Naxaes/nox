@@ -1,0 +1,4 @@
+* Change from pointer to handles
+* Change to three address code
+* Use custom allocators
+

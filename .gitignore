@@ -3,6 +3,8 @@ references/~*
 
 build/
 
+fuzzing/corpus/*
+
 assembly/*.o
 assembly/*.out
 assembly/*.bin

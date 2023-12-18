@@ -1,0 +1,41 @@
+
+/*
+fun main() int {
+    a := 10
+    b := 20
+
+    fun add(a: int, b: int) int {
+        a + b
+    }
+
+    x := 0
+    while x < add(a, b) {
+        if a < b {
+            print("a is less than b")
+        } else if a == b {
+            print("a is equal to b")
+        } else {
+            print("a is greater than b")
+            return 0
+        }
+        a = a - 2
+        x = x + 1
+    }
+
+    return 1
+}
+*/
+a := 0
+b := 1
+/*
+if a < b {
+    print("a is less than b")
+} else if a == b {
+    print("a is equal to b")
+} else {
+    print("a is greater than b")
+}
+*/
+if a > b then print("a is greater than b") else print("a is less than b")
+
+// main()

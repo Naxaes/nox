@@ -1,55 +1,49 @@
 #pragma once
 
+#include "os/memory.h"
 #include "types.h"
 #include "type_checker/checker.h"
 
+#include <stdlib.h>
 
-#define ALL_INSTRUCTIONS \
-    X(MovImm64) \
-    X(Mov) \
-    X(Add) \
-    X(Sub) \
-    X(Mul) \
-    X(Div) \
-    X(Mod) \
-    X(Lt) \
-    X(Le) \
-    X(Eq) \
-    X(Ne) \
-    X(Ge) \
-    X(Gt) \
-    X(Store) \
-    X(Load) \
-    X(Jmp) \
-    X(JmpZero) \
-    X(Print) \
-    X(Exit)
+
+#define ALL_INSTRUCTIONS(X) \
+    X(Nop)               \
+    X(MovImm64)          \
+    X(Mov)               \
+    X(Add)               \
+    X(Add_Imm)           \
+    X(Sub)               \
+    X(Mul)               \
+    X(Div)               \
+    X(Mod)               \
+    X(Lt)                \
+    X(Le)                \
+    X(Eq)                \
+    X(Ne)                \
+    X(Ge)                \
+    X(Gt)                \
+    X(Not)               \
+    X(Neg)               \
+    X(And)               \
+    X(Or)                \
+    X(Store)             \
+    X(StoreAddr)         \
+    X(Load)              \
+    X(Jmp)               \
+    X(JmpZero)           \
+    X(Push)              \
+    X(Pop)               \
+    X(Print)             \
+    X(Call)              \
+    X(Ret)               \
+    X(Exit)              \
 
 typedef enum {
-    Instruction_MovImm64,
-    Instruction_Mov,
-    Instruction_Add,
-    Instruction_Add_Imm,
-    Instruction_Sub,
-    Instruction_Mul,
-    Instruction_Div,
-    Instruction_Mod,
-    Instruction_Lt,
-    Instruction_Le,
-    Instruction_Eq,
-    Instruction_Ne,
-    Instruction_Ge,
-    Instruction_Gt,
-    Instruction_Store,
-    Instruction_Load,
-    Instruction_Jmp,
-    Instruction_JmpZero,
-    Instruction_Push,
-    Instruction_Pop,
-    Instruction_Print,
-    Instruction_Call,
-    Instruction_Ret,
-    Instruction_Exit,
+#define X(name) Instruction_##name,
+    ALL_INSTRUCTIONS(X)
+#undef X
+    INSTRUCTION_LAST = Instruction_Exit,
 } InstructionType;
 
 typedef struct {
@@ -79,6 +73,10 @@ typedef struct {
     Instruction* instructions;
     size_t size;
 } Bytecode;
+
+static inline void bytecode_free(Bytecode code) {
+    dealloc(code.instructions);
+}
 
 Bytecode generate_code(TypedAst ast);
 

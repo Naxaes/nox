@@ -2,7 +2,7 @@
 
 
 const char* token_repr(Token token) {
-#define X(upper, lower, body, value) case Token_##upper: return body;
+#define X(upper, lower, body, group) case Token_##upper: return body;
     switch (token) {
         ALL_TOKENS(X)
     }
@@ -11,7 +11,7 @@ const char* token_repr(Token token) {
 
 
 TokenGroup token_group(Token token) {
-#define X(upper, lower, body, value) case Token_##upper: return TokenGroup_##value;
+#define X(upper, lower, body, group) case Token_##upper: return group;
     switch (token) {
         ALL_TOKENS(X)
     }

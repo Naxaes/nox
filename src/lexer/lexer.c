@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "os/memory.h"
 #include "str.h"
 #include "error.h"
 #include "utf8.h"
@@ -11,10 +12,10 @@
 
 /* ---------------------------- TOKEN ARRAY -------------------------------- */
 void token_array_free(TokenArray tokens) {
-    free(tokens.tokens);
-    free(tokens.identifiers);
-    free(tokens.source_offsets);
-    free(tokens.data_pool);
+    dealloc(tokens.tokens);
+    dealloc(tokens.identifiers);
+    dealloc(tokens.source_offsets);
+    dealloc(tokens.data_pool);
 }
 
 
@@ -27,8 +28,8 @@ typedef struct {
 
 static InternPool intern_pool_make(void) {
     return (InternPool) {
-        .lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
-        .data   = (u8*) malloc(1024),
+        .lookup = memset(alloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
+        .data   = (u8*) alloc(1024),
         .used   = sizeof(DataPoolIndex),  // Skip the first few bytes so that 0 from the lookup table means "not found".
     };
 }
@@ -87,15 +88,15 @@ typedef struct {
 } Lexer;
 
 static void lexer_free(Lexer* lexer) {
-    free(lexer->tokens);
-    free(lexer->identifiers);
-    free(lexer->indices);
-    free(lexer->intern_pool.lookup);
-    free(lexer->intern_pool.data);
+    dealloc(lexer->tokens);
+    dealloc(lexer->identifiers);
+    dealloc(lexer->indices);
+    dealloc(lexer->intern_pool.lookup);
+    dealloc(lexer->intern_pool.data);
 }
 
 static TokenArray lexer_to_token_array(Lexer* lexer, Str name) {
-    free(lexer->intern_pool.lookup);
+    dealloc(lexer->intern_pool.lookup);
     return (TokenArray) {
             .name        = name,
             .source      = lexer->source,
@@ -215,11 +216,21 @@ static inline int add_token_with_identifier(Lexer* lexer, const char* current, T
 }
 
 static Token token_from_string(Str string) {
+    static_assert(TOKEN_LAST == 37, "Expected to handle this many tokens. Token has been updated!");
+    if (str_equals(string, STR("true")))   return Token_True;
+    if (str_equals(string, STR("false")))  return Token_False;
+    if (str_equals(string, STR("not")))    return Token_Not;
+    if (str_equals(string, STR("and")))    return Token_And;
+    if (str_equals(string, STR("or")))     return Token_Or;
+    if (str_equals(string, STR("and")))    return Token_And;
+    if (str_equals(string, STR("or")))     return Token_Or;
     if (str_equals(string, STR("if")))     return Token_If;
     if (str_equals(string, STR("else")))   return Token_Else;
+    if (str_equals(string, STR("then")))   return Token_Then;
     if (str_equals(string, STR("fun")))    return Token_Fun;
     if (str_equals(string, STR("while")))  return Token_While;
     if (str_equals(string, STR("return"))) return Token_Return;
+    if (str_equals(string, STR("struct"))) return Token_Struct;
 
     return Token_Identifier;
 }
@@ -241,6 +252,7 @@ const char* lexer_repr_of(TokenArray tokens, TokenIndex id) {
         }
         default:
             assert(0 && "Unreachable");
+            return 0;
     }
 }
 
@@ -250,9 +262,9 @@ TokenArray lexer_lex(Str name, Str source, Logger* logger) {
         .logger = logger,
         .source = source,
         .count  = 0,
-        .tokens = (Token*) malloc(1024 * sizeof(Token)),
-        .identifiers = (DataPoolIndex*) malloc(1024 * sizeof(DataPoolIndex)),
-        .indices = (SourceIndex*) malloc(1024 * sizeof(SourceIndex)),
+        .tokens = (Token*) alloc(1024 * sizeof(Token)),
+        .identifiers = (DataPoolIndex*) alloc(1024 * sizeof(DataPoolIndex)),
+        .indices = (SourceIndex*) alloc(1024 * sizeof(SourceIndex)),
         .intern_pool = intern_pool_make()
     };
 
@@ -335,6 +347,9 @@ TokenArray lexer_lex(Str name, Str source, Logger* logger) {
             } break;
             case ',': {
                 current += add_single_token(&lexer, current, Token_Comma);
+            } break;
+            case '.': {
+                current += add_single_token(&lexer, current, Token_Dot);
             } break;
             case '"': {
                 int is_valid = 0;

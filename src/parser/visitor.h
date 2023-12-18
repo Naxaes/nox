@@ -1,6 +1,6 @@
 
 
-#include "parser.h"
+#include "tree.h"
 
 
 struct Visitor;
@@ -20,8 +20,10 @@ void* walk(Visitor* visitor, Node* node);
 void* walk_view(Visitor* visitor, Node** nodes);
 void* walk_literal(Visitor* visitor, NodeLiteral* node);
 void* walk_identifier(Visitor* visitor, NodeIdentifier* node);
+void* walk_unary(Visitor* visitor, NodeUnary* node);
 void* walk_binary(Visitor* visitor, NodeBinary* node);
 void* walk_call(Visitor* visitor, NodeCall* node);
+void* walk_access(Visitor* visitor, NodeAccess* node);
 void* walk_type(Visitor* visitor, NodeType* node);
 void* walk_assign(Visitor* visitor, NodeAssign* node);
 void* walk_var_decl(Visitor* visitor, NodeVarDecl* node);
@@ -32,4 +34,8 @@ void* walk_fun_decl(Visitor* visitor, NodeFunDecl* node);
 void* walk_return_stmt(Visitor* visitor, NodeReturn* node);
 void* walk_if_stmt(Visitor* visitor, NodeIf* node);
 void* walk_while_stmt(Visitor* visitor, NodeWhile* node);
+void* walk_init_arg(Visitor* visitor, NodeInitArg* node);
+void* walk_init(Visitor* visitor, NodeInit* node);
+void* walk_struct_field(Visitor* visitor, NodeStructField* node);
+void* walk_struct_decl(Visitor* visitor, NodeStruct* node);
 

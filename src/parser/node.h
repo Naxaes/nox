@@ -3,16 +3,17 @@
 
 
 #define ALL_LITERAL_TYPES(X) \
-    X(Void,    void,     void)   \
-    X(Boolean, boolean,  bool)   \
-    X(Integer, integer,  int)    \
-    X(Real,    real,     real)   \
-    X(String,  string,   str)    \
+    X(Void,    void,     void,  0)   \
+    X(Boolean, boolean,  bool,  8)   \
+    X(Integer, integer,  int,   8)    \
+    X(Real,    real,     real,  8)   \
+    X(String,  string,   str,   8)    \
 
 
-#define X(upper, lower, repr) LiteralType_##upper,
+#define X(upper, lower, repr, size) LiteralType_##upper,
 typedef enum {
     ALL_LITERAL_TYPES(X)
+    LITERAL_TYPE_LAST = LiteralType_String,
 } LiteralType;
 #undef X
 const char* literal_type_name(LiteralType type);
@@ -26,6 +27,13 @@ typedef union {
 } LiteralValue;
 
 typedef enum {
+    UnaryOpGroup_Arithmetic,
+    UnaryOpGroup_Relational,
+    UnaryOpGroup_Logical,
+    UnaryOpGroup_Bitwise,
+} UnaryOpGroup;
+
+typedef enum {
     BinaryOpGroup_Arithmetic,
     BinaryOpGroup_Relational,
     BinaryOpGroup_Logical,
@@ -33,21 +41,24 @@ typedef enum {
 } BinaryOpGroup;
 
 #define ALL_BINARY_OPS(X) \
-    X(Add, add, +,   Arithmetic)  \
-    X(Sub, sub, -,   Arithmetic)  \
-    X(Mul, mul, *,   Arithmetic)  \
-    X(Div, div, /,   Arithmetic)  \
-    X(Mod, mod, %,   Arithmetic)  \
-    X(Lt,  lt,  <,   Relational)  \
-    X(Le,  le,  <=,  Relational)  \
-    X(Eq,  eq,  ==,  Relational)  \
-    X(Ne,  ne,  !=,  Relational)  \
-    X(Ge,  ge,  >=,  Relational)  \
-    X(Gt,  gt,  >,   Relational)  \
+    X(Add,  add,  +,     Arithmetic)  \
+    X(Sub,  sub,  -,     Arithmetic)  \
+    X(Mul,  mul,  *,     Arithmetic)  \
+    X(Div,  div,  /,     Arithmetic)  \
+    X(Mod,  mod,  %,     Arithmetic)  \
+    X(Lt,   lt,   <,     Relational)  \
+    X(Le,   le,   <=,    Relational)  \
+    X(Eq,   eq,   ==,    Relational)  \
+    X(Ne,   ne,   !=,    Relational)  \
+    X(Ge,   ge,   >=,    Relational)  \
+    X(Gt,   gt,   >,     Relational)  \
+    X(And,  and,  and,   Logical)     \
+    X(Or,   or,   or,    Logical)     \
 
 #define X(upper, lower, repr, group) BinaryOp_##upper,
 typedef enum {
     ALL_BINARY_OPS(X)
+    BINARY_OP_LAST = BinaryOp_Or,
 } BinaryOp;
 #undef X
 const char* binary_op_name(BinaryOp op);
@@ -55,6 +66,24 @@ const char* binary_op_repr(BinaryOp op);
 BinaryOpGroup binary_op_group(BinaryOp op);
 int binary_op_is_arithmetic(BinaryOp op);
 int binary_op_is_relational(BinaryOp op);
+int binary_op_is_logical(BinaryOp op);
+
+
+#define All_UnaryOps(X) \
+    X(Neg, neg, -, Arithmetic)      \
+    X(Not, not, !, Logical)         \
+
+#define X(upper, lower, repr, group) UnaryOp_##upper,
+typedef enum {
+    All_UnaryOps(X)
+    UNARY_OP_LAST = UnaryOp_Not,
+} UnaryOp;
+#undef X
+const char* unary_op_name(UnaryOp op);
+const char* unary_op_repr(UnaryOp op);
+int unary_op_is_arithmetic(UnaryOp op);
+int unary_op_is_relational(UnaryOp op);
+int unary_op_is_logical(UnaryOp op);
 
 
 typedef enum {
@@ -73,6 +102,10 @@ typedef enum {
     X(Identifier, identifier, NodeFlag_Is_Expression,                   \
         const char* name;                                               \
     )                                                                   \
+    X(Unary, unary, NodeFlag_Is_Expression,                             \
+        Node* expr;                                                     \
+        UnaryOp op;                                                     \
+    )                                                                   \
     X(Binary, binary, NodeFlag_Is_Expression,                           \
         Node* left;                                                     \
         Node* right;                                                    \
@@ -82,6 +115,10 @@ typedef enum {
         const char* name;                                               \
         i32    count;                                                   \
         Node** args;                                                    \
+    )                                                                   \
+    X(Access, access, NodeFlag_Is_Expression,                           \
+        Node* left;                                                     \
+        Node* right;                                                    \
     )                                                                   \
     X(Type, type, NodeFlag_None,                                        \
         const char* name;                                               \
@@ -100,13 +137,16 @@ typedef enum {
         i32    parent;                                                  \
         i32    count;                                                   \
         Node** nodes;                                                   \
+        i32    decl_count;                                              \
+        Node** decls;                                                   \
     )                                                                   \
     X(FunBody, fun_body, NodeFlag_None,                                 \
         i32    id;                                                      \
         i32    parent;                                                  \
         i32    count;                                                   \
         Node** nodes;                                                   \
-        i32    decls;                                                   \
+        i32    decl_count;                                              \
+        Node** decls;                                                   \
     )                                                                   \
     X(FunParam, fun_param, NodeFlag_Is_Statement,                       \
         const char* name;                                               \
@@ -133,6 +173,29 @@ typedef enum {
         Node* condition;                                                \
         NodeBlock* then_block;                                          \
         NodeBlock* else_block;                                          \
+    )                                                                   \
+    X(InitArg, init_arg, NodeFlag_None,                                 \
+        const char* name;                                               \
+        int    offset;                                                  \
+        Node*  expr;                                                    \
+    )                                                                   \
+    X(Init, init, NodeFlag_Is_Expression,                               \
+        const char* name;                                               \
+        int    count;                                                   \
+        NodeInitArg** args;                                             \
+    )                                                                   \
+    X(StructField, struct_field, NodeFlag_None,                         \
+        const char* name;                                               \
+        int   offset;                                                   \
+        Node* type;                                                     \
+        Node* expr;                                                     \
+    )                                                                   \
+    X(Struct, struct_decl, NodeFlag_None,                               \
+        i32    id;                                                      \
+        i32    parent;                                                  \
+        int    count;                                                   \
+        Node** nodes;                                                   \
+        const char* name;                                               \
     )                                                                   \
     X(Module, module, NodeFlag_None,                                    \
         Node** stmts;                                                   \

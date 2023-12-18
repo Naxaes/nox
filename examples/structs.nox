@@ -1,0 +1,28 @@
+
+
+
+struct Rectangle {
+    width:  int
+    height: int
+}
+
+struct Circle {
+    radius: int
+}
+
+fun area(rectangle: Rectangle) int {
+    return rectangle.width * rectangle.height
+}
+
+fun main() {
+    rectangle := Rectangle { width=10 height=20 }
+    circle    := Circle { width=10 }
+
+    if area(rectangle) == 200 {
+        print("rectangle area is 200")
+    } else {
+        print("rectangle area is not 200")
+    }
+}
+
+main()

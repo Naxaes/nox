@@ -55,4 +55,20 @@ RUN cmake --build .
 WORKDIR /app
 
 # Run the C program
+#CMD ["./build/nox", "run", "examples/adding.nox"]
+#CMD ["./build/nox", "run", "examples/arithmetic.nox"]
+#CMD ["./build/nox", "run", "examples/assignment.nox"]
+#CMD ["./build/nox", "run", "examples/check-error.nox"]
+#CMD ["./build/nox", "run", "examples/conditions.nox"]
+#CMD ["./build/nox", "run", "examples/fun-call.nox"]
+#CMD ["./build/nox", "run", "examples/fun-decl.nox"]
+#CMD ["./build/nox", "run", "examples/identifier.nox"]
+#CMD ["./build/nox", "run", "examples/if-else-stmt.nox"]
+#CMD ["./build/nox", "run", "examples/if-stmt.nox"]
+#CMD ["./build/nox", "run", "examples/lex-error.nox"]
+#CMD ["./build/nox", "run", "examples/parse-error.nox"]
+#CMD ["./build/nox", "run", "examples/program.nox"]
+#CMD ["./build/nox", "run", "examples/single_digit.nox"]
+#CMD ["./build/nox", "run", "examples/string.nox"]
+#CMD ["./build/nox", "run", "examples/structs.nox"]
 CMD ["./build/nox", "run", "examples/while-loop.nox"]

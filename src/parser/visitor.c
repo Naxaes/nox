@@ -10,10 +10,14 @@ void* visit(void* visitor, Node* node) {
             return impl->visit_literal(impl, (NodeLiteral*) node);
         case NodeKind_Identifier:
             return impl->visit_identifier(impl, (NodeIdentifier*) node);
+        case NodeKind_Unary:
+            return impl->visit_unary(impl, (NodeUnary*) node);
         case NodeKind_Binary:
             return impl->visit_binary(impl, (NodeBinary*) node);
         case NodeKind_Call:
             return impl->visit_call(impl, (NodeCall*) node);
+        case NodeKind_Access:
+            return impl->visit_access(impl, (NodeAccess*) node);
         case NodeKind_Type:
             return impl->visit_type(impl, (NodeType*) node);
         case NodeKind_Assign:
@@ -36,6 +40,14 @@ void* visit(void* visitor, Node* node) {
             return impl->visit_while_stmt(impl, (NodeWhile*) node);
         case NodeKind_Module:
             return impl->visit_module(impl, (NodeModule*) node);
+        case NodeKind_InitArg:
+            return impl->visit_init_arg(impl, (NodeInitArg*) node);
+        case NodeKind_Init:
+            return impl->visit_init(impl, (NodeInit*) node);
+        case NodeKind_StructField:
+            return impl->visit_struct_field(impl, (NodeStructField*) node);
+        case NodeKind_Struct:
+            return impl->visit_struct_decl(impl, (NodeStruct*) node);
     }
 }
 
@@ -46,12 +58,19 @@ void* walk(Visitor* visitor, Node* node) {
             return NULL;
         case NodeKind_Identifier:
             return NULL;
-        case NodeKind_Binary:      
+        case NodeKind_Unary:
+            visit(visitor, node->unary.expr);
+            return NULL;
+        case NodeKind_Binary:
             visit(visitor, node->binary.left);
             visit(visitor, node->binary.right);
             return NULL;
         case NodeKind_Call:
             walk_view(visitor, (Node**)node->call.args);
+            return NULL;
+        case NodeKind_Access:
+            visit(visitor, node->access.left);
+            visit(visitor, node->access.right);
             return NULL;
         case NodeKind_Type:
             return NULL;
@@ -93,6 +112,19 @@ void* walk(Visitor* visitor, Node* node) {
             walk_view(visitor, node->module.decls);
             walk_view(visitor, node->module.stmts);
             return NULL;
+        case NodeKind_InitArg:
+            visit(visitor, node->init_arg.expr);
+            return NULL;
+        case NodeKind_Init:
+            walk_view(visitor, (Node**)node->init.args);
+            return NULL;
+        case NodeKind_StructField:
+            if (node->struct_field.expr)
+                visit(visitor, node->struct_field.expr);
+            return NULL;
+        case NodeKind_Struct:
+            walk_view(visitor, node->struct_decl.nodes);
+            return NULL;
     }
 }
 
@@ -120,6 +152,11 @@ void* walk_identifier(Visitor* visitor, NodeIdentifier* node) {
     return NULL;
 }
 
+void* walk_unary(Visitor* visitor, NodeUnary* node) {
+    visit(visitor, node->expr);
+    return NULL;
+}
+
 void* walk_binary(Visitor* visitor, NodeBinary* node) {
     visit(visitor, node->left);
     visit(visitor, node->right);
@@ -128,6 +165,12 @@ void* walk_binary(Visitor* visitor, NodeBinary* node) {
 
 void* walk_call(Visitor* visitor, NodeCall* node) {
     walk_view(visitor, (Node**)node->args);
+    return NULL;
+}
+
+void* walk_access(Visitor* visitor, NodeAccess* node) {
+    visit(visitor, node->left);
+    visit(visitor, node->right);
     return NULL;
 }
 
@@ -189,4 +232,23 @@ void* walk_while_stmt(Visitor* visitor, NodeWhile* node) {
     return NULL;
 }
 
+void* walk_init_arg(Visitor* visitor, NodeInitArg * node) {
+    visit(visitor, node->expr);
+    return NULL;
+}
 
+void* walk_init(Visitor* visitor, NodeInit* node) {
+    walk_view(visitor, (Node**) node->args);
+    return NULL;
+}
+
+void* walk_struct_field(Visitor* visitor, NodeStructField* node) {
+    if (node->expr)
+        visit(visitor, node->expr);
+    return NULL;
+}
+
+void* walk_struct_decl(Visitor* visitor, NodeStruct* node) {
+    walk_view(visitor, node->nodes);
+    return NULL;
+}

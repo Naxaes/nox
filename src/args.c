@@ -10,6 +10,7 @@ const char* USAGE = ""
 "  OPTIONS:\n"
 "    -q, --quiet       Don't output anything from the compiler\n"
 "    -t, --time        Output time to finish command\n"
+"    -h, --help        Display options for a command\n"
 "  SUBCOMMAND:\n"
 "    com  [file]       Compile the project or a given file\n"
 "    dis  <file>       Disassemble a file\n"
@@ -132,6 +133,8 @@ ArgCommands parse_args(int argc, const char* const argv[]) {
         else if (is_argument(arg, RUN_MODE_STRING[HELP]))  {  commands.mode = HELP; }
         else if (is_argument(arg, "-v") || is_argument(arg, "--verbose")) {  commands.verbose   = 1; }
         else if (is_argument(arg, "-t") || is_argument(arg, "--time"))    {  commands.take_time = 1; }
+        else if (is_argument(arg, "-h") || is_argument(arg, "--help"))    {  commands.show_help = 1; }
+        else if (is_argument(arg, "-s") || is_argument(arg, "--source"))  {  commands.as_source = 1; }
         else {
             // @TODO: Check that there are no more commands.
             fprintf(stderr, "Unknown command '%s'\n", argv[i]);

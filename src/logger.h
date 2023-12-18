@@ -9,7 +9,8 @@ typedef enum {
     LOG_LEVEL_INFO,
     LOG_LEVEL_WARN,
     LOG_LEVEL_ERROR,
-    LOG_LEVEL_PANIC
+    LOG_LEVEL_PANIC,
+    LOG_LEVEL_NONE,
 } LogLevel;
 
 typedef struct Logger {
