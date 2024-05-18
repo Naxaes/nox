@@ -1,14 +1,13 @@
 #pragma once
-#include "types.h"
+#include "preamble.h"
 
 typedef struct {
-    i32 index;
     i32 row;
     i32 column;
 } Location;
 
 static inline Location location_of(const char* source, size_t index) {
-    Location location = { (i32) index, 1, 1 };
+    Location location = {1, 1 };
     for (size_t i = 0; i < index; ++i) {
         if (source[i] == '\n') {
             location.row += 1;

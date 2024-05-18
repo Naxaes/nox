@@ -1,20 +1,18 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
 #include "jit.h"
+#include "allocator.h"
 
 #include "os/memory.h"
 #include "aarch64.h"
 #include "x86_64.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
-
-void jit_free(JittedFunction function) {
-    memory_map_free((void*) function.function, function.size);
-}
 
 
-JittedFunction jit_compile_aarch64(Bytecode code) {
-    u32* machine_code = alloc(code.size * sizeof(*machine_code));
+JitFunction jit_compile_aarch64(Bytecode code) {
+    u32* machine_code = alloc(0, code.size * sizeof(*machine_code));
     size_t size = 0;
 
     for (size_t i = 0; i < code.size; ++i) {
@@ -25,10 +23,8 @@ JittedFunction jit_compile_aarch64(Bytecode code) {
                 u64 val = instruction.imm.val;
 
                 u32 inst = aarch64_mov_imm(dst, val);
-                if (inst == 0) {
-                    dealloc(machine_code);
-                    return (JittedFunction) { .function = NULL, .size = 0 };
-                }
+                if (inst == 0)
+                    return NULL;
                 machine_code[size++] = inst;
             } break;
             case Instruction_Mov: {
@@ -71,20 +67,19 @@ JittedFunction jit_compile_aarch64(Bytecode code) {
                 machine_code[size++] = inst;
             } break;
             default: {
-                // fprintf(stderr, "[WARN]: (Jit) Invalid instruction '%d'\n", instruction.type);
-                dealloc(machine_code);
-                return (JittedFunction) { .function = NULL, .size = 0 };
+                fprintf(stderr, "[WARN]: (Jit) Invalid instruction '%d'\n", instruction.type);
+                return NULL;
             } break;
         }
     }
 
     void* memory = memory_map_executable(machine_code, size * sizeof(*machine_code));
-    return (JittedFunction) { .function = (JitFunction) memory, .size = size };
+    return (JitFunction) memory;
 }
 
 
-JittedFunction jit_compile_x86_64(Bytecode code) {
-    u8* machine_code = alloc(code.size);
+JitFunction jit_compile_x86_64(Bytecode code) {
+    u8* machine_code = alloc(0, code.size);
     size_t size = 0;
 
     for (size_t i = 0; i < code.size; ++i) {
@@ -95,8 +90,8 @@ JittedFunction jit_compile_x86_64(Bytecode code) {
                 u64 val = instruction.imm.val;
 
                 if (val >= 1uLL << 32) {
-                    fprintf(stderr, "[ERROR]: mov only supports 32-bit immediate\n");
-                    return (JittedFunction) { .function = NULL, .size = 0 };
+                    printf("[ERROR]: mov only supports 32-bit immediate\n");
+                    return NULL;
                 }
 
                 u8 inst[] = x86_64_mov_imm32(dst, val);
@@ -147,33 +142,31 @@ JittedFunction jit_compile_x86_64(Bytecode code) {
             } break;
             default: {
                 fprintf(stderr, "[WARN]: Invalid instruction '%d'\n", instruction.type);
-                return (JittedFunction) { .function = NULL, .size = 0 };
+                return NULL;
             } break;
         }
     }
 
     void* memory = memory_map_executable(machine_code, size * sizeof(*machine_code));
-    if (memory == NULL)
-        dealloc(machine_code);
-    return (JittedFunction) { .function = (JitFunction) memory, .size = size };
+    return (JitFunction) memory;
 }
 
 
 
-JittedFunction jit_compile(Bytecode code, int output) {
+JitFunction jit_compile(Bytecode code, int output) {
 #if defined(__x86_64__)
-    // if (output) printf("[INFO]: JIT compiling for x86_64\n");
-    JittedFunction function =  jit_compile_x86_64(code);
-    if (function.function == NULL)
-        return function;
+    if (output) printf("[INFO]: JIT compiling for x86_64\n");
+    JitFunction function =  jit_compile_x86_64(code);
+    if (function == NULL)
+        return NULL;
 #elif defined(__aarch64__)
-    // if (output) printf("[INFO]: JIT compiling for aarch64\n");
-    JittedFunction function = jit_compile_aarch64(code);
-    if (function.function == NULL)
-        return function;
+    if (output) printf("[INFO]: JIT compiling for aarch64\n");
+    JitFunction function = jit_compile_aarch64(code);
+    if (function == NULL)
+        return NULL;
 #else
-    JittedFunction function = { .function = NULL, .size = 0 };
-    return function;
+    JitFunction function = NULL;
+    return NULL;
 #endif
 
 #ifdef OUTPUT_JIT
@@ -182,7 +175,7 @@ JittedFunction jit_compile(Bytecode code, int output) {
 
     FILE* file = fopen(OUTPUT_JIT ".bin", "wb");
     assert(file != NULL && "Failed to open " OUTPUT_JIT);
-    fwrite((void*)function.function, function.size, 1, file);
+    fwrite((void*)function, code.size, 1, file);
     fclose(file);
 
 #if defined(__x86_64__)

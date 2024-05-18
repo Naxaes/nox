@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string.h>
-#include "types.h"
+#include "preamble.h"
 
 typedef struct {
     size_t size;

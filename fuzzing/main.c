@@ -3,6 +3,9 @@
 
 #include "lib.h"
 
+#define LOGGER_IMPLEMENTATION
+#include "logger.h"
+
 
 int LLVMFuzzerTestOneInput(const u8* data, size_t size) {
     Logger logger = logger_make_with_memory("fuzzing", LOG_LEVEL_ERROR, NULL, 0);

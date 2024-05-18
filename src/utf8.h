@@ -1,5 +1,5 @@
 #pragma once
-#include "types.h"
+#include "preamble.h"
 
 #ifndef STRING_BOUNDS_CHECK
 #define STRING_BOUNDS_CHECK
