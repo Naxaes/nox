@@ -1,5 +1,6 @@
 .idea/
 references/~*
+fuzzing/corpus/
 
 build/
 

@@ -134,8 +134,20 @@ TEST(LexerTest, Comments) {
     test_tokenization(STR("/* hello\n /* hello*/ \n*/"), {}, {});
 }
 
-
-
-
-
+//TEST(LexerTest, AllTokens) {
+//    test_tokenization(
+//            STR("0 123 0.0 1.02 0.01 123.123 \"\" \"a\" \"abc\" \"a b c\" \"a\nb c\" \"a\\nb\\tc\" \"a\\\"b c\" a abc a_b_c a0 a0b a0_b1_c2 if else while + - * / % < <= == != >= > = := : . true false not and or ( ) { } ,"),
+//            {Token_Number, Token_Number, Token_Real, Token_Real, Token_Real, Token_Real, Token_String, Token_String,
+//             Token_String, Token_String, Token_String, Token_String, Token_String, Token_Identifier, Token_Identifier, Token_Identifier, Token_Identifier,
+//             Token_Identifier, Token_Identifier, Token_If, Token_Else, Token_While, Token_Plus, Token_Minus,
+//             Token_Asterisk, Token_Slash, Token_Percent, Token_Less, Token_Less_Equal, Token_Equal_Equal,
+//             Token_Bang_Equal, Token_Greater_Equal, Token_Greater, Token_Equal, Token_Colon_Equal, Token_Colon,
+//             Token_Dot, Token_True, Token_False, Token_Not, Token_And, Token_Or, Token_Open_Paren, Token_Close_Paren,
+//             Token_Open_Brace, Token_Close_Brace, Token_Comma},
+//            {"0", "123", "0.0", "1.02", "0.01", "123.123", "", "a", "abc", "a b c", "a\nb c", "a\\nb\\tc", "a\\\"b c",
+//             "a", "abc", "a_b_c", "a0", "a0b", "a0_b1_c2", "if", "else", "while", "+", "-", "*", "/", "%", "<", "<=", "==", "!=", ">=",
+//             ">", "=", ":=", ":", ".", "true", "false", "not", "and", "or", "(", ")", "{", "}", ","}
+//    );
+//}
+//
 
