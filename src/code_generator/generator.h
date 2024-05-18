@@ -73,12 +73,20 @@ typedef struct {
     };
 } Instruction;
 
+typedef struct Label {
+    const char* name;
+    size_t      offset;
+} Label;
+
 typedef i64 Register;
 
 typedef struct {
     Instruction* instructions;
     size_t size;
+    Label* labels;
+    size_t label_count;
 } Bytecode;
 
 Bytecode generate_code(TypedAst ast);
-
+void bytecode_free(Bytecode code);
+bool bytecode_is_ok(Bytecode code);

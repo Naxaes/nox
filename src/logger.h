@@ -100,7 +100,7 @@ static inline u64 logger_gen_group_id(const char* name) {
 }
 
 
-#define debug(id, ...)  logger_debug(id,  CURRENT_SOURCE_LOCATION, __VA_ARGS__)
+#define debug(log, ...)  logger_debug(log, CURRENT_SOURCE_LOCATION, __VA_ARGS__)
 static inline void __attribute__((always_inline))
 logger_debug(u64 group, Source_Location source_location, const char* message, ...) {
     if (LOG_LEVEL <= LOG_LEVEL_DEBUG && logger_is_group_enabled(group)) {
@@ -111,8 +111,7 @@ logger_debug(u64 group, Source_Location source_location, const char* message, ..
     }
 }
 
-#define info(log, ...)      logger_info(log,  CURRENT_SOURCE_LOCATION, __VA_ARGS__)
-#define infol(id, ...) logger_info(id, CURRENT_SOURCE_LOCATION, __VA_ARGS__)
+#define info(log, ...)  logger_info(log, CURRENT_SOURCE_LOCATION, __VA_ARGS__)
 static inline void __attribute__((always_inline))
 logger_info(u64 group, Source_Location source_location, const char* message, ...) {
     if (LOG_LEVEL <= LOG_LEVEL_INFO && logger_is_group_enabled(group)) {
@@ -123,7 +122,7 @@ logger_info(u64 group, Source_Location source_location, const char* message, ...
     }
 }
 
-#define warn(...) logger_warning(0, CURRENT_SOURCE_LOCATION, __VA_ARGS__)
+#define warn(log, ...) logger_warning(log, CURRENT_SOURCE_LOCATION, __VA_ARGS__)
 static inline void __attribute__((always_inline))
 logger_warning(u64 group, Source_Location source_location, const char* message, ...) {
     if (LOG_LEVEL <= LOG_LEVEL_WARNING && logger_is_group_enabled(group)) {
@@ -163,11 +162,8 @@ logger_assert(u64 group, Source_Location source_location, const char* message, .
         va_start(args, message);
         logger_log(LOG_LEVEL_ASSERT, group,  source_location, message, args);
         va_end(args);
-
-        return 1;
     }
-
-    return 0;
+    return 1;
 }
 
 #define panic(log, ...) logger_panic(log, CURRENT_SOURCE_LOCATION, __VA_ARGS__)
@@ -208,7 +204,7 @@ const char* LOG_GROUP_NAMES[64];
 void logger_init(Log_Level level) {
     LOG_OUTPUT[LOG_LEVEL_DEBUG]   = stdout;
     LOG_OUTPUT[LOG_LEVEL_INFO]    = stdout;
-    LOG_OUTPUT[LOG_LEVEL_WARNING] = stderr;
+    LOG_OUTPUT[LOG_LEVEL_WARNING] = stdout;
     LOG_OUTPUT[LOG_LEVEL_ERROR]   = stderr;
     LOG_OUTPUT[LOG_LEVEL_ASSERT]  = stderr;
     LOG_OUTPUT[LOG_LEVEL_PANIC]   = stderr;

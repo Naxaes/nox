@@ -106,7 +106,7 @@ static inline void* alloc_(Allocator allocator, size_t size, Alloc_Location loca
     if (result == NULL) {
         error(0, "[ERROR] allocation failed, bytes=%zu, func=%s, loc=%s:%d\n", size, location.function, location.file, location.line);
     } else {
-//        printf("[ALLOC] ptr=%p, size=%zu, func=%s, loc=%s:%d\n", result, size, location.function, location.file, location.line);
+//        debug(0, "[ALLOC] ptr=%p, size=%zu, func=%s, loc=%s:%d\n", result, size, location.function, location.file, location.line);
     }
 
     return result;
@@ -119,9 +119,9 @@ static inline void* realloc_(Allocator allocator, size_t new_size, void* old_ptr
     void* result = function((Allocator) data, new_size, old_ptr, old_size);
 
     if (result != NULL) {
-        printf("[REALLOC] old_ptr=%p, old_size=%zu, new_ptr=%p, new_size=%zu, func=%s, loc=%s:%d\n", old_ptr, old_size, result, new_size, location.function, location.file, location.line);
+        debug(0, "old_ptr=%p, old_size=%zu, new_ptr=%p, new_size=%zu, func=%s, loc=%s:%d\n", old_ptr, old_size, result, new_size, location.function, location.file, location.line);
     } else {
-        printf("[ERROR] reallocation failed, old_ptr=%p, old_size=%zu, new_size=%zu, func=%s, loc=%s:%d\n", old_ptr, old_size, new_size, location.function, location.file, location.line);
+        error(0, "reallocation failed, old_ptr=%p, old_size=%zu, new_size=%zu, func=%s, loc=%s:%d\n", old_ptr, old_size, new_size, location.function, location.file, location.line);
     }
 
     return result;
@@ -133,7 +133,7 @@ static inline void dealloc_(Allocator allocator, void* old_ptr, size_t old_size,
     deallocate_fn function = deallocate_functions[type];
     function((Allocator) data, old_ptr, old_size);
 
-    printf("[DEALLOC] ptr=%p, size=%zu, func=%s, loc=%s:%d\n", old_ptr, old_size, location.function, location.file, location.line);
+    debug(0, "[DEALLOC] ptr=%p, size=%zu, func=%s, loc=%s:%d\n", old_ptr, old_size, location.function, location.file, location.line);
 }
 
 static inline void destroy_(Allocator allocator, Alloc_Location location) {
@@ -142,7 +142,7 @@ static inline void destroy_(Allocator allocator, Alloc_Location location) {
     destroy_fn function = destroy_functions[type];
     function((Allocator) data);
 
-    printf("[DESTROY] allocator=%p, type=%d, loc=%s:%d\n", allocator, type, location.file, location.line);
+    debug(0, "[DESTROY] allocator=%p, type=%d, loc=%s:%d\n", allocator, type, location.file, location.line);
 }
 
 

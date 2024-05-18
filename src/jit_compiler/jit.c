@@ -67,7 +67,7 @@ JitFunction jit_compile_aarch64(Bytecode code) {
                 machine_code[size++] = inst;
             } break;
             default: {
-                fprintf(stderr, "[WARN]: (Jit) Invalid instruction '%d'\n", instruction.type);
+                warn(0, "Invalid instruction '%d'", instruction.type);
                 return NULL;
             } break;
         }
@@ -90,7 +90,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
                 u64 val = instruction.imm.val;
 
                 if (val >= 1uLL << 32) {
-                    printf("[ERROR]: mov only supports 32-bit immediate\n");
+                    error(0, "mov only supports 32-bit immediate\n");
                     return NULL;
                 }
 
@@ -141,7 +141,7 @@ JitFunction jit_compile_x86_64(Bytecode code) {
                 machine_code[size++] = inst;
             } break;
             default: {
-                fprintf(stderr, "[WARN]: Invalid instruction '%d'\n", instruction.type);
+                warn(0, "Invalid instruction '%d'\n", instruction.type);
                 return NULL;
             } break;
         }
@@ -155,12 +155,12 @@ JitFunction jit_compile_x86_64(Bytecode code) {
 
 JitFunction jit_compile(Bytecode code, int output) {
 #if defined(__x86_64__)
-    if (output) printf("[INFO]: JIT compiling for x86_64\n");
+    if (output) info(0, "JIT compiling for x86_64");
     JitFunction function =  jit_compile_x86_64(code);
     if (function == NULL)
         return NULL;
 #elif defined(__aarch64__)
-    if (output) printf("[INFO]: JIT compiling for aarch64\n");
+    if (output) info(0, "[INFO]: JIT compiling for aarch64");
     JitFunction function = jit_compile_aarch64(code);
     if (function == NULL)
         return NULL;
@@ -205,8 +205,8 @@ JitFunction jit_compile(Bytecode code, int output) {
     // Close the pipe
     int status = pclose(pipe);
     if (status == 0) {
-        printf("[INFO]: Disassembly of " OUTPUT_JIT);
-        printf("%s\n", buffer);
+        info(0, "Disassembly of " OUTPUT_JIT);
+        info(0, "%s", buffer);
     }
 #endif
 #endif

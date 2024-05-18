@@ -25,8 +25,6 @@ int  multi_byte_count(char byte);
 int  rune_matches(const char* a, rune b);
 int  is_whitespace(rune c);
 int  matches(rune a, rune b, rune x, rune y);
-int  is_alpha(rune c);
-int  is_digit(rune a);
 
 static inline int are_continuations(const char* chars, int count) {
     for (int i = 0; i < count; ++i)

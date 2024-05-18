@@ -1,4 +1,5 @@
 #include "c_transpiler.h"
+#include "logger.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -35,6 +36,13 @@ int transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
                 u8 src = instruction.reg.src;
 
                 fprintf(file, "\treg[%d] = reg[%d] + reg[%d];\n", dst, dst, src);
+            } break;
+            case Instruction_Add_Imm: {
+                // int n = n + <val>;
+                Register dst = instruction.imm.dst;
+                i64      val = instruction.imm.val;
+
+                fprintf(file, "\treg[%lld] = reg[%lld] + %lld;\n", dst, dst, val);
             } break;
             case Instruction_Sub: {
                 // int n = n - m;
@@ -129,18 +137,19 @@ int transpile_instructions(Bytecode code, FILE* file, size_t from, size_t to) {
             } break;
             case Instruction_JmpZero: {
                 // if (n == 0) goto label;
-                u8 label  = instruction.jmp.label;
-                u8 src = instruction.jmp.src;
+                u8 label = instruction.jmp.label;
+                u8 src   = instruction.jmp.src;
 
                 fprintf(file, "\tif (reg[%d] == 0) goto label_%d;\n", src, label);
                 labels[label_count++] = label;
             } break;
             case Instruction_Exit: {
-                fprintf(file, "\treturn reg[0];\n");
+                fprintf(file, "\treturn reg[2];\n");
                 fprintf(file, "}\n");
+                return 0;
             } break;
             default: {
-                fprintf(stderr, "[ERROR] (Transpiler): Invalid instruction '%d'\n", instruction.type);
+                error(0, "Invalid instruction '%d'\n", instruction.type);
                 return -1;
             } break;
         }
@@ -155,7 +164,7 @@ void compile_c(Bytecode code) {
 #else
     FILE* file = fopen(OUTPUT_C ".c", "w");
     if (!file) {
-        fprintf(stderr, "[ERROR]: Could not open file\n");
+        error(0, "Could not open file\n");
         return;
     }
 

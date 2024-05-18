@@ -8,26 +8,28 @@
 const char* USAGE = ""
 "Usage: nox [OPTIONS] <SUBCOMMAND> [ARGS]\n"
 "  OPTIONS:\n"
-"    -q, --quiet       Don't output anything from the compiler\n"
-"    -t, --time        Output time to finish command\n"
+"    -q, --quiet        Don't output anything from the compiler\n"
+"    -t, --time         Output time to finish command\n"
 "  SUBCOMMAND:\n"
-"    com  [file]       Compile the project or a given file\n"
-"    dis  <file>       Disassemble a file\n"
-"    dot  <file>       Generates a dot Graphviz file\n"
-"    repl              Start the interactive session\n"
-"    run  <file>       Run a file\n"
-"    sim  <file>       Interpret a file\n"
-"    help              Show this output\n";
+"    com    [file]      Compile the project or a given file\n"
+"    dis    <file>      Disassemble a file\n"
+"    dot    <file>      Generates a dot Graphviz file\n"
+"    repl               Start the interactive session\n"
+"    run    <file>      Run a file\n"
+"    sim    <file>      Interpret a file\n"
+"    trans  <file>      Interpret a file\n"
+"    help               Show this output\n";
 
 const char* RUN_MODE_STRING[] = {
         [NO_RUN_MODE] = "none",
-        [COM]  = "com",
-        [DIS]  = "dis",
-        [DOT]  = "dot",
-        [REPL] = "repl",
-        [RUN]  = "run",
-        [SIM]  = "sim",
-        [HELP] = "help",
+        [COM]   = "com",
+        [DIS]   = "dis",
+        [DOT]   = "dot",
+        [REPL]  = "repl",
+        [RUN]   = "run",
+        [SIM]   = "sim",
+        [TRANS] = "trans",
+        [HELP]  = "help",
 };
 
 #define is_argument(s, x)  (memcmp(s, x, strlen(x)) == 0)
@@ -118,6 +120,19 @@ int parse_sim(int argc, const char* const argv[], ArgCommands* commands) {
     return 0;
 }
 
+int parse_trans(int argc, const char* const argv[], ArgCommands* commands) {
+    if (commands->mode == NO_RUN_MODE) {
+        commands->mode = TRANS;
+    } else {
+        fprintf(stderr, "'%s' is a top-level subcommand, not a subcommand for '%s'. They can't be run at the same time.\n", RUN_MODE_STRING[TRANS], RUN_MODE_STRING[commands->mode]);
+        exit(EXIT_FAILURE);
+    }
+    if (argc > 0) {
+        commands->input_file = argv[0];
+        return 1;
+    }
+    return 0;
+}
 
 
 ArgCommands parse_args(int argc, const char* const argv[]) {
@@ -136,6 +151,7 @@ ArgCommands parse_args(int argc, const char* const argv[]) {
         else if (is_argument(arg, RUN_MODE_STRING[REPL]))  {  i += parse_repl(argc-i-1,  argv+i+1, &commands); }
         else if (is_argument(arg, RUN_MODE_STRING[RUN]))   {  i += parse_run(argc-i-1,   argv+i+1, &commands); }
         else if (is_argument(arg, RUN_MODE_STRING[SIM]))   {  i += parse_sim(argc-i-1,   argv+i+1, &commands); }
+        else if (is_argument(arg, RUN_MODE_STRING[TRANS])) {  i += parse_trans(argc-i-1,   argv+i+1, &commands); }
         else if (is_argument(arg, RUN_MODE_STRING[HELP]))  {  commands.mode = HELP; }
         else if (is_argument(arg, "-v") || is_argument(arg, "--verbose")) {  commands.verbose   = 1; }
         else if (is_argument(arg, "-t") || is_argument(arg, "--time"))    {  commands.take_time = 1; }

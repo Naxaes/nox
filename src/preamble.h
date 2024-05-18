@@ -29,3 +29,8 @@ typedef u32 rune;
 #       define __FUNCTION_NAME__   __func__
 #   endif
 #endif
+
+
+
+#define STATIC_ASSERT(condition, msg) _Static_assert(condition, #msg)
+// #define STATIC_ASSERT(condition, msg) typedef char static_assertion_##msg[(!!(condition))*2-1]

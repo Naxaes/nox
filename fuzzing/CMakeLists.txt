@@ -13,8 +13,6 @@ set(SOURCES
     ../src/lexer/token.c
     ../src/lexer/lexer.c
     ../src/parser/parser.c
-    ../src/parser/node.c
-    ../src/parser/visitor.c
     ../src/type_checker/checker.c
     ../src/code_generator/generator.c
     ../src/interpreter/interpreter.c

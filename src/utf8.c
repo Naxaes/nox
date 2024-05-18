@@ -108,14 +108,4 @@ int matches(rune a, rune b, rune x, rune y) {
     return a == x && b == y;
 }
 
-int is_alpha(rune c) {  // TODO(ted): FIX UNICODE!
-    return  ('a' <= c && c <= 'z') ||
-            ('A' <= c && c <= 'Z'); // ||
-    // c >= 0xc2;
-}
-
-int is_digit(rune a) {
-    return '0' <= a && a <= '9';
-}
-
 

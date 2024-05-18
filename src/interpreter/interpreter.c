@@ -172,9 +172,9 @@ i64 interpret(Bytecode code) {
                 return value;
             } break;
             default: {
-                fprintf(stderr, "[WARN] (Interpreter): Invalid instruction '%d'\n", instruction.type);
-                free(interpreter.stack);
-                free(interpreter.registers);
+                warn(0, "Invalid instruction '%d'\n", instruction.type);
+                dealloc(0, interpreter.stack, sizeof(u64) * STACK_MAX_SIZE);
+                dealloc(0, interpreter.registers, sizeof(u64) * REG_MAX_SIZE);
                 return 1;
             } break;
         }

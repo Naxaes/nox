@@ -10,6 +10,14 @@
 #include "allocator.h"
 
 
+static inline int is_identifier_start(char c) {
+    return is_alpha(c) || c == '_';
+}
+
+static inline int is_identifier_continue(char c) {
+    return is_identifier_start(c) || is_digit(c);
+}
+
 
 /* ---------------------------- TOKEN ARRAY -------------------------------- */
 void token_array_free(TokenArray tokens) {
@@ -19,9 +27,13 @@ void token_array_free(TokenArray tokens) {
     free(tokens.data_pool);
 }
 
+bool token_array_is_ok(TokenArray tokens) {
+    return tokens.tokens != NULL;
+}
+
 
 /* ---------------------------- LEXER HELPERS -------------------------------- */
-typedef struct {
+typedef struct InternPool {
     u32*   lookup;
     u8*    data;
     size_t used;
@@ -64,14 +76,6 @@ static DataPoolIndex intern_string(InternPool* intern_pool, Str string) {
             offset = intern_pool->lookup[index];
         }
     } while (1);
-}
-
-static inline int is_identifier_start(char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
-}
-
-static inline int is_identifier_continue(char c) {
-    return is_identifier_start(c) || is_digit(c);
 }
 
 
@@ -159,8 +163,8 @@ static Str parse_string(const char* source, int* is_valid) {
         *is_valid = 1;
         return (Str) { (size_t)(end-start), start };
     } else {
-        fprintf(stderr, "[Error] (Lexer) Unterminated string literal.\n");
-        size_t length = (size_t)(end-start);
+        error(0, "Unterminated string literal.\n");
+        int length = (int)(end-start);
         point_to_error((Str) { length, start }, 0, length);
         *is_valid = 0;
         return STR_EMPTY;
@@ -186,7 +190,7 @@ static const char* parse_block_comment(const char* source) {
         }
     }
     if (*source == '\0') {
-        fprintf(stderr, "[Error] (Lexer) Unterminated block comment.\n");
+        error(0, "Unterminated block comment.\n");
         point_to_error((Str) { 2, source-2 }, 0, 2);
     } else {
         source += 2;
@@ -241,6 +245,9 @@ const char* lexer_repr_of(TokenArray tokens, TokenIndex id) {
     }
 }
 
+static inline char peek_next(const char* current) {
+    return *(current+1);
+}
 
 TokenArray lexer_lex(Str name, Str source) {
     Lexer lexer =  {
@@ -254,83 +261,83 @@ TokenArray lexer_lex(Str name, Str source) {
 
     const char* current = source.data;
     while (1) {
+        STATIC_ASSERT(TOKEN_COUNT == 30, Token_count_has_changed);
         switch (*current) {
-            case '\0': {
+            case '\0':
                 add_single_token(&lexer, current, Token_Eof);
                 return lexer_to_token_array(&lexer, name);
-            } break;
             case '\n':
             case '\t':
             case '\r':
             case ' ':
                 current += 1;  // Skip whitespace.
-            break;
-            case '+': {
+                break;
+            case '+':
                 current += add_single_token(&lexer, current, Token_Plus);
-            } break;
-            case '-': {
+                break;
+            case '-':
                 current += add_single_token(&lexer, current, Token_Minus);
-            } break;
-            case '*': {
+                break;
+            case '*':
                 current += add_single_token(&lexer, current, Token_Asterisk);
-            } break;
-            case '/': {
-                if (*(current+1) == '/') {
+                break;
+            case '/':
+                if (peek_next(current) == '/') {
                     current = parse_line_comment(current);
-                } else if (*(current+1) == '*') {
+                } else if (peek_next(current) == '*') {
                     current = parse_block_comment(current);
                 } else {
                     current += add_single_token(&lexer, current, Token_Slash);
                 }
-            } break;
-            case '%': {
+                break;
+            case '%':
                 current += add_single_token(&lexer, current, Token_Percent);
-            } break;
-            case '>': {
-                if (*(current+1) == '=')
+                break;
+            case '>':
+                if (peek_next(current) == '=')
                     current += add_double_token(&lexer, current, Token_Greater_Equal);
                 else
                     current += add_single_token(&lexer, current, Token_Greater);
-            } break;
-            case ':': {
-                if (*(current+1) == '=')
+                break;
+            case ':':
+                if (peek_next(current) == '=')
                     current += add_double_token(&lexer, current, Token_Colon_Equal);
                 else
                     current += add_single_token(&lexer, current, Token_Colon);
-            } break;
-            case '=': {
-                if (*(current+1) == '=')
+                break;
+            case '=':
+                if (peek_next(current) == '=')
                     current += add_double_token(&lexer, current, Token_Equal_Equal);
                 else
                     current += add_single_token(&lexer, current, Token_Equal);
-            } break;
-            case '!': {
-                if (*(current+1) == '=')
+                break;
+            case '!':
+                if (peek_next(current) == '=')
                     current += add_double_token(&lexer, current, Token_Bang_Equal);
                 else
                     current += add_single_token(&lexer, current, Token_Bang);
-            } break;
-            case '<': {
-                if (*(current+1) == '=')
+                break;
+            case '<':
+                if (peek_next(current) == '=')
                     current += add_double_token(&lexer, current, Token_Less_Equal);
                 else
                     current += add_single_token(&lexer, current, Token_Less);
-            } break;
-            case '(': {
+                break;
+            case '(':
                 current += add_single_token(&lexer, current, Token_Open_Paren);
-            } break;
-            case ')': {
+                break;
+            case ')':
                 current += add_single_token(&lexer, current, Token_Close_Paren);
-            } break;
-            case '{': {
+                break;
+            case '{':
                 current += add_single_token(&lexer, current, Token_Open_Brace);
-            } break;
-            case '}': {
+                break;
+            case '}':
                 current += add_single_token(&lexer, current, Token_Close_Brace);
-            } break;
-            case ',': {
+                break;
+            case ',':
                 current += add_single_token(&lexer, current, Token_Comma);
-            } break;
+                break;
             case '"': {
                 int is_valid = 0;
                 Str string = parse_string(current, &is_valid);
@@ -353,7 +360,7 @@ TokenArray lexer_lex(Str name, Str source) {
                 } else {
                     int width = multi_byte_count(*current);
                     if (width == 0) width = 1;
-                    fprintf(stderr, "[Error] (Lexer) " STR_FMT "\n  Unknown character: '" STR_FMT "'\n", STR_ARG(name), width, current);
+                    error(0, STR_FMT "\n  Unknown character: '" STR_FMT "'\n", STR_ARG(name), width, current);
 
                     // Assume all characters only take up one column in the terminal for now.
                     int start = (int)(current - source.data);

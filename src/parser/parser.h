@@ -18,3 +18,5 @@ typedef struct {
 GrammarTree parse(TokenArray tokens);
 
 void grammar_tree_free(GrammarTree ast);
+
+bool grammar_tree_is_ok(GrammarTree ast);

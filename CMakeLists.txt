@@ -28,7 +28,6 @@ endif()
 
 set(SOURCES
     src/lexer/lexer.c
-    src/lexer/token.c
     src/parser/parser.c
     src/type_checker/checker.c
     src/code_generator/generator.c
@@ -40,12 +39,11 @@ set(SOURCES
     src/utf8.c
     src/error.c
     src/allocator.c
+    src/lib.c
     src/jit_compiler/jit.c
     src/os/memory.c
     src/transpiler/c_transpiler.c
-    src/parser/visitor.c
     src/parser/ast_printer.c
-    src/parser/node.c
 )
 add_executable(nox src/main.c ${SOURCES})
 target_include_directories(nox PRIVATE src/)

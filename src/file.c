@@ -22,7 +22,7 @@ Str read_file(const char* path) {
     fclose(file);
 
     if (read != size) {
-        free(buffer);
+        dealloc(0, buffer, size+1);
         return STR_EMPTY;
     }
 

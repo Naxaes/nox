@@ -35,3 +35,4 @@ const char* lexer_repr_of(TokenArray tokens, TokenIndex id);
 /// Free the memory allocated by the token array.
 void token_array_free(TokenArray tokens);
 
+bool token_array_is_ok(TokenArray tokens);

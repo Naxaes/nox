@@ -30,3 +30,5 @@ typedef struct {
 TypedAst type_check(GrammarTree ast);
 
 void typed_ast_free(TypedAst ast);
+
+bool typed_ast_is_ok(TypedAst ast);

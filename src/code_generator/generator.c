@@ -3,7 +3,6 @@
 
 #include "allocator.h"
 #include "generator.h"
-#include "../parser/visitor.h"
 #include "disassembler.h"
 #include "logger.h"
 
@@ -19,8 +18,24 @@ typedef struct {
     size_t references_count;
 } DeferredBlock;
 
-typedef struct {
-    Visitor visitors;
+STATIC_ASSERT(NODE_KIND_COUNT == 14, Node_count_has_changed);
+typedef struct Generator {
+    Register (*visit_literal)(struct Generator* self, const NodeLiteral* node);
+    Register (*visit_identifier)(struct Generator* self, const NodeIdentifier* node);
+    Register (*visit_binary)(struct Generator* self, const NodeBinary* node);
+    Register (*visit_call)(struct Generator* self, const NodeCall* node);
+    Register (*visit_type)(struct Generator* self, const NodeType* node);
+    Register (*visit_assign)(struct Generator* self, const NodeAssign* node);
+    Register (*visit_var_decl)(struct Generator* self, const NodeVarDecl* node);
+    Register (*visit_block)(struct Generator* self, const NodeBlock* node);
+    Register (*visit_fun_body)(struct Generator* self, const NodeFunBody* node);
+    Register (*visit_fun_param)(struct Generator* self, const NodeFunParam* node);
+    Register (*visit_fun_decl)(struct Generator* self, const NodeFunDecl* node);
+    Register (*visit_return_stmt)(struct Generator* self, const NodeReturn* node);
+    Register (*visit_if_stmt)(struct Generator* self, const NodeIf* node);
+    Register (*visit_while_stmt)(struct Generator* self, const NodeWhile* node);
+    Register (*visit_module)(struct Generator* self, const NodeModule* node);
+    
     TypedAst ast;
     
     Instruction* instructions;
@@ -35,7 +50,17 @@ typedef struct {
 
     DeferredBlock* deferred_blocks;
     size_t         deferred_blocks_count;
+
+    Label*  labels;
+    size_t  labels_count;
 } Generator;
+
+void add_label(Generator* generator, const char* name) {
+    generator->labels[generator->labels_count++] = (Label) {
+        .name = name,
+        .offset = generator->count,
+    };
+}
 
 Register register_alloc(Generator* generator) {
     return generator->current_register++;
@@ -51,7 +76,7 @@ Register mov_imm64(Generator* generator, Register dst, u64 value) {
     generator->instructions[generator->count++] = (Instruction) {
         .type = Instruction_MovImm64,
         .imm.dst = dst,
-        .imm.val = value
+        .imm.val = (i64)value
     };
     return dst;
 }
@@ -146,7 +171,7 @@ static Local* find_local(const Generator* generator, const char* name) {
             Local* local = current->locals + i;
             assert((local->decl->kind == NodeKind_VarDecl || local->decl->kind == NodeKind_FunDecl || local->decl->kind == NodeKind_FunParam) && "Invalid node kind");
 
-            if (local->decl->var_decl.name == name) {
+            if (local->decl->as.var_decl.name == name) {
                 return local;
             }
         }
@@ -159,6 +184,10 @@ static Local* find_local(const Generator* generator, const char* name) {
 
 
 /* ---------------------------- GENERATOR VISITOR -------------------------------- */
+Register generator_visit(Generator* generator, const Node* node) {
+    visit_impl(generator, node);
+}
+
 // Adds 1 scratch register.
 Register generate_literal(Generator* generator, const NodeLiteral* literal) {
     switch (literal->type) {
@@ -191,9 +220,9 @@ Register generate_identifier(Generator* generator, const NodeIdentifier* identif
     Local* local = find_local(generator, identifier->name);
     if (local != NULL) {
         Register dst = register_alloc(generator);
-        return load(generator, dst, local->decl->var_decl.decl_offset);
+        return load(generator, dst, local->decl->as.var_decl.decl_offset);
     }
-    fprintf(stderr, "Unknown identifier: '%s'\n", identifier->name);
+    error(0, "Unknown identifier: '%s'\n", identifier->name);
     return 0;
 }
 
@@ -216,8 +245,8 @@ Register generate_binary(Generator* generator, const NodeBinary* binary) {
     InstructionType inst = binary_op[binary->op];
     assert(inst != 0 && "Invalid binary operation");
 
-    Register dst = (Register) visit(generator, binary->left);
-    Register src = (Register) visit(generator, binary->right);
+    Register dst = generator_visit(generator, binary->left);
+    Register src = generator_visit(generator, binary->right);
     Register reg = bin_op(generator, inst, dst, src);
 
     // NOTE(ted): Both left and right adds a new scratch register.
@@ -229,7 +258,7 @@ Register generate_binary(Generator* generator, const NodeBinary* binary) {
 
 // Should not increase any scratch registers.
 Register generate_assign(Generator* generator, const NodeAssign* assign) {
-    Register src = (Register) visit(generator, assign->expression);
+    Register src = generator_visit(generator, assign->expression);
 
     Local* local = find_local(generator, assign->name);
     if (local != NULL) {
@@ -240,21 +269,21 @@ Register generate_assign(Generator* generator, const NodeAssign* assign) {
         } else {
             // Free the scratch register.
             register_free(generator);
-            return store(generator, local->decl->var_decl.decl_offset, src);
+            return store(generator, local->decl->as.var_decl.decl_offset, src);
         }
     }
-    fprintf(stderr, "Unknown identifier: '%s'\n", assign->name);
+    error(0, "Unknown identifier: '%s'\n", assign->name);
     return 0;
 }
 
 Register generate_var_decl(Generator* generator, const NodeVarDecl* var_decl) {
     Local*   dst = find_local(generator, var_decl->name);
-    Register src = (Register) visit(generator, var_decl->expression);
+    Register src = generator_visit(generator, var_decl->expression);
 
     // Free the scratch register.
     register_free(generator);
 
-    return store(generator, dst->decl->var_decl.decl_offset, src);
+    return store(generator, dst->decl->as.var_decl.decl_offset, src);
 }
 
 Register generate_if_stmt(Generator* generator, const NodeIf* if_stmt) {
@@ -266,17 +295,17 @@ Register generate_if_stmt(Generator* generator, const NodeIf* if_stmt) {
      *    statements
      * end:
      */
-    Register condition = (Register) visit(generator, if_stmt->condition);
+    Register condition = generator_visit(generator, if_stmt->condition);
     register_free(generator);  // Consume the expression register
 
     Instruction* jump_to_else = jmp_zero(generator, condition);
-    visit(generator, (Node*) if_stmt->then_block);
+    generator_visit(generator, (Node*) if_stmt->then_block);
 
     if (if_stmt->else_block != NULL) {
         Instruction* jump_to_end = jmp(generator);
         jump_to_else->jmp.label = (i32) generator->count;
 
-        visit(generator, (Node*) if_stmt->else_block);
+        generator_visit(generator, (Node*) if_stmt->else_block);
         jump_to_end->jmp.label = (i32) generator->count;
     } else {
         jump_to_else->jmp.label = (i32) generator->count;
@@ -295,11 +324,11 @@ Register generate_while_stmt(Generator* generator, const NodeWhile* while_stmt) 
      */
     size_t start = generator->count;
 
-    Register condition = (Register) visit(generator, while_stmt->condition);
+    Register condition = generator_visit(generator, while_stmt->condition);
     register_free(generator);  // Consume the expression register
 
     Instruction* jump_to_else = jmp_zero(generator, condition);
-    visit(generator, (Node*) while_stmt->then_block);
+    generator_visit(generator, (Node*) while_stmt->then_block);
 
     Instruction* jump_to_start = jmp(generator);
     jump_to_start->jmp.label = (Register) start;
@@ -310,7 +339,7 @@ Register generate_while_stmt(Generator* generator, const NodeWhile* while_stmt) 
 //        Instruction* jump_to_end = jmp(generator);
 //        jump_to_else->jmp.label = generator->count;
 //
-//        visit(generator, (Node*) while_stmt->else_block);
+//        generator_visit(generator, (Node*) while_stmt->else_block);
 //        jump_to_end->jmp.label = generator->count;
     } else {
         jump_to_else->jmp.label = (i32) generator->count;
@@ -327,7 +356,7 @@ Register generate_call(Generator* generator, const NodeCall* fn_call) {
 
     for (i32 i = 0; i < fn_call->count; ++i) {
         Node* arg = fn_call->args[i];
-        Register reg = (Register)(size_t)visit(generator, arg);
+        Register reg = (Register)(size_t)generator_visit(generator, arg);
 
         push(generator, REG_BASE + i);
         mov_reg(generator, REG_BASE + i, reg);
@@ -361,7 +390,7 @@ Register generate_call(Generator* generator, const NodeCall* fn_call) {
 
     // NOTE(ted): If the function has a return value, then store it in a new register.
     Register dst = -1;
-    if (result->decl->fun_decl.return_type) {
+    if (result->decl->as.fun_decl.return_type) {
         dst = mov_reg(generator, generator->current_register++, REG_BASE);
     }
 
@@ -391,7 +420,7 @@ Register generate_block(Generator* generator, const NodeBlock* node) {
     Block* current = generator->current;
     generator->current = generator->ast.block + node->id;
     for (i32 i = 0; i < node->count; ++i) {
-        visit(generator, node->nodes[i]);
+        generator_visit(generator, node->nodes[i]);
     }
     generator->current = current;
     return -1;
@@ -401,7 +430,7 @@ Register generate_fun_body(Generator* generator, const NodeFunBody* node) {
     Block* current = generator->current;
     generator->current = generator->ast.block + node->id;
     for (i32 i = 0; i < node->count; ++i) {
-        visit(generator, node->nodes[i]);
+        generator_visit(generator, node->nodes[i]);
     }
     generator->current = current;
     return -1;
@@ -410,14 +439,14 @@ Register generate_fun_body(Generator* generator, const NodeFunBody* node) {
 
 
 Register generate_deferred(Generator* generator, const NodeFunDecl* node) {
+    add_label(generator, node->name);
+
     // Prologue
     push(generator, BP);
     mov_reg(generator, BP, SP);
 
-    // Allocate space for parameters
-    bin_op(generator, Instruction_Add_Imm, SP, node->param_count);
-    // Allocate space for locals
-    bin_op(generator, Instruction_Add_Imm, SP, node->body->decls);
+    // Allocate space for parameters and locals
+    bin_op(generator, Instruction_Add_Imm, SP, node->param_count + node->body->decls);
 
     Block* current = generator->current;
     generator->current = generator->ast.block + node->body->id;
@@ -426,11 +455,11 @@ Register generate_deferred(Generator* generator, const NodeFunDecl* node) {
         NodeFunParam* param = node->params[i];
         Local* local = find_local(generator, param->name);
         assert(local->decl->kind == NodeKind_FunParam && "Invalid node kind");
-        store(generator, local->decl->fun_param.offset, REG_BASE + i);
+        store(generator, local->decl->as.fun_param.offset, REG_BASE + i);
     }
 
     for (i32 i = 0; i < node->body->count; ++i) {
-        visit(generator, node->body->nodes[i]);
+        generator_visit(generator, node->body->nodes[i]);
     }
     generator->current = current;
 
@@ -458,7 +487,7 @@ Register generate_fun_decl(Generator* generator, const NodeFunDecl* fun_decl) {
 }
 
 Register generate_return_stmt(Generator* generator, const NodeReturn* node) {
-    Register src = (Register) visit(generator, node->expression);
+    Register src = generator_visit(generator, node->expression);
     register_free(generator);  // Consume the expression register
 
     mov_reg(generator, REG_BASE, src);
@@ -478,10 +507,10 @@ Register generate_module(Generator* generator, const NodeModule* node) {
     Block* current = generator->current;
     generator->current = generator->ast.block;
     for (i32 i = 0; i < node->decl_count; ++i) {
-        visit(generator, node->decls[i]);
+        generator_visit(generator, node->decls[i]);
     }
     for (i32 i = 0; i < node->stmt_count; ++i) {
-        visit(generator, node->stmts[i]);
+        generator_visit(generator, node->stmts[i]);
     }
     generator->current = current;
     return -1;
@@ -491,11 +520,22 @@ Register generate_module(Generator* generator, const NodeModule* node) {
 
 Bytecode generate_code(TypedAst ast) {
     Generator generator = {
-        .visitors = {
-#define X(upper, lower, flags, body) .visit_##lower = (Visit##upper##Fn) generate_##lower,
-            ALL_NODES(X)
-        },
-#undef X
+        .visit_literal=generate_literal,
+        .visit_identifier=generate_identifier,
+        .visit_binary=generate_binary,
+        .visit_call=generate_call,
+        .visit_type=generate_type,
+        .visit_assign=generate_assign,
+        .visit_var_decl=generate_var_decl,
+        .visit_block=generate_block,
+        .visit_fun_body=generate_fun_body,
+        .visit_fun_param=generate_fun_param,
+        .visit_fun_decl=generate_fun_decl,
+        .visit_return_stmt=generate_return_stmt,
+        .visit_if_stmt=generate_if_stmt,
+        .visit_while_stmt=generate_while_stmt,
+        .visit_module=generate_module,
+
         .ast = ast,
         .instructions = alloc(0, sizeof(Instruction) * 1024),
         .count = 0,
@@ -506,17 +546,20 @@ Bytecode generate_code(TypedAst ast) {
         .current = ast.block,
         .deferred_blocks = alloc(0, sizeof(DeferredBlock) * 1024),
         .deferred_blocks_count = 0,
+        .labels = alloc(0, sizeof(Label) * 1024),
     };
 
     Node* node = ast.start;
 
     if (node->kind == NodeKind_Module) {
-        // Allocate space for locals
-        bin_op(&generator, Instruction_Add_Imm, SP, node->module.global_count);
+        // Allocate space for globals
+        NodeModule* module = &node->as.module;
+        bin_op(&generator, Instruction_Add_Imm, SP, module->global_count);
     }
-    visit(&generator, node);
+    generator_visit(&generator, node);
     if (node->kind == NodeKind_Module) {
-        bin_op(&generator, Instruction_Add_Imm, SP, -node->module.global_count);
+        NodeModule* module = &node->as.module;
+        bin_op(&generator, Instruction_Add_Imm, SP, -module->global_count);
     }
     mov_reg(&generator, REG_BASE, generator.current_register-1);
     generator.instructions[generator.count++] = (Instruction) {
@@ -526,8 +569,7 @@ Bytecode generate_code(TypedAst ast) {
 
     for (size_t i = 0; i < generator.deferred_blocks_count; ++i) {
         DeferredBlock deferred = generator.deferred_blocks[i];
-        assert(deferred.node->kind == NodeKind_FunDecl && "Invalid node kind");
-        NodeFunDecl* fun_decl = &deferred.node->fun_decl;
+        NodeFunDecl* fun_decl = node_expect(deferred.node, FunDecl);
         for (size_t j = 0; j < deferred.references_count; ++j) {
             Instruction* instruction = deferred.references[j];
             instruction->call.label = (i32) generator.count;
@@ -548,5 +590,14 @@ Bytecode generate_code(TypedAst ast) {
         }
     }
 
-    return (Bytecode) { generator.instructions, generator.count };
+    return (Bytecode) { generator.instructions, generator.count, generator.labels, generator.labels_count };
+}
+
+void bytecode_free(Bytecode code) {
+    free(code.instructions);
+    free(code.labels);
+}
+
+bool bytecode_is_ok(Bytecode code) {
+    return code.instructions != NULL;
 }
