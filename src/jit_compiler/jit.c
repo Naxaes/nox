@@ -1,16 +1,18 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
 #include "jit.h"
+#include "allocator.h"
 
 #include "os/memory.h"
 #include "aarch64.h"
 #include "x86_64.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
 
 
 JitFunction jit_compile_aarch64(Bytecode code) {
-    u32* machine_code = malloc(code.size * sizeof(*machine_code));
+    u32* machine_code = alloc(0, code.size * sizeof(*machine_code));
     size_t size = 0;
 
     for (size_t i = 0; i < code.size; ++i) {
@@ -77,7 +79,7 @@ JitFunction jit_compile_aarch64(Bytecode code) {
 
 
 JitFunction jit_compile_x86_64(Bytecode code) {
-    u8* machine_code = malloc(code.size);
+    u8* machine_code = alloc(0, code.size);
     size_t size = 0;
 
     for (size_t i = 0; i < code.size; ++i) {

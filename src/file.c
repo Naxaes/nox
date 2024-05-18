@@ -1,7 +1,8 @@
-#include "file.h"
-
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "allocator.h"
+#include "file.h"
 
 
 Str read_file(const char* path) {
@@ -13,7 +14,7 @@ Str read_file(const char* path) {
     size_t size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* buffer = malloc(size + 1);
+    char* buffer = alloc(0, size + 1);
     if (!buffer)
         return STR_EMPTY;
 

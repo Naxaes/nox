@@ -23,8 +23,10 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 set(SOURCES
+    ${PROJECT_SOURCE_DIR}/../src/lexer/token.c
     ${PROJECT_SOURCE_DIR}/../src/lexer/lexer.c
     ${PROJECT_SOURCE_DIR}/../src/file.c
+    ${PROJECT_SOURCE_DIR}/../src/allocator.c
     ${PROJECT_SOURCE_DIR}/../src/str.c
     ${PROJECT_SOURCE_DIR}/../src/args.c
     ${PROJECT_SOURCE_DIR}/../src/utf8.c
@@ -35,6 +37,10 @@ message(STATUS "SOURCES: ${SOURCES}")
 add_executable(lexer ${SOURCES} lexer.cpp)
 target_include_directories(lexer PRIVATE ${PROJECT_SOURCE_DIR}/../src)
 target_link_libraries(lexer GTest::gtest_main GTest::gmock_main)
+
+add_executable(parser ${SOURCES} parser.cpp)
+target_include_directories(parser PRIVATE ${PROJECT_SOURCE_DIR}/../src)
+target_link_libraries(parser GTest::gtest_main GTest::gmock_main)
 
 include(GoogleTest)
 gtest_discover_tests(lexer

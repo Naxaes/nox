@@ -5,6 +5,9 @@
 #include "interpreter/interpreter.h"
 #include "jit_compiler/jit.h"
 
+#define LOGGER_IMPLEMENTATION
+#include "logger.h"
+
 
 int LLVMFuzzerTestOneInput(const u8* data, size_t size) {
     size = size >= 1024 ? 1023 : size;

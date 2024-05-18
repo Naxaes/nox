@@ -1,12 +1,14 @@
-#include "lexer.h"
-#include "str.h"
-#include "error.h"
-#include "utf8.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+
+#include "lexer.h"
+#include "str.h"
+#include "error.h"
+#include "utf8.h"
+#include "allocator.h"
+
 
 
 /* ---------------------------- TOKEN ARRAY -------------------------------- */
@@ -27,8 +29,8 @@ typedef struct {
 
 static InternPool intern_pool_make(void) {
     return (InternPool) {
-        .lookup = memset(malloc(1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
-        .data   = (u8*) malloc(1024),
+        .lookup = memset(alloc(0, 1024 * sizeof(u32)), 0, 1024 * sizeof(u32)),
+        .data   = (u8*) alloc(0, 1024),
         .used   = sizeof(DataPoolIndex),  // Skip the first few bytes so that 0 from the lookup table means "not found".
     };
 }
@@ -225,21 +227,17 @@ static Token token_from_string(Str string) {
 
 const char* lexer_repr_of(TokenArray tokens, TokenIndex id) {
     Token token = tokens.tokens[id];
-    const char* repr = token_repr(token);
-    if (repr != 0)
-        return repr;
-
     switch (token) {
         case Token_Number:
         case Token_Real:
         case Token_String:
         case Token_Identifier: {
             size_t offset = tokens.identifiers[id];
-            repr = (const char*) &tokens.data_pool[offset];
-            return repr;
+            return (const char*) &tokens.data_pool[offset];
         }
-        default:
-            assert(0 && "Unreachable");
+        default: {
+            return token_repr(token);
+        }
     }
 }
 
@@ -248,25 +246,25 @@ TokenArray lexer_lex(Str name, Str source) {
     Lexer lexer =  {
         .source = source,
         .count  = 0,
-        .tokens = (Token*) malloc(1024 * sizeof(Token)),
-        .identifiers = (DataPoolIndex*) malloc(1024 * sizeof(DataPoolIndex)),
-        .indices = (SourceIndex*) malloc(1024 * sizeof(SourceIndex)),
+        .tokens = (Token*) alloc(0, 1024 * sizeof(Token)),
+        .identifiers = (DataPoolIndex*) alloc(0, 1024 * sizeof(DataPoolIndex)),
+        .indices = (SourceIndex*) alloc(0, 1024 * sizeof(SourceIndex)),
         .intern_pool = intern_pool_make()
     };
 
     const char* current = source.data;
-    retry:;
     while (1) {
-        // Skip whitespace.
-        while (is_whitespace(*current)) {
-            ++current;
-        }
-
         switch (*current) {
             case '\0': {
                 add_single_token(&lexer, current, Token_Eof);
                 return lexer_to_token_array(&lexer, name);
             } break;
+            case '\n':
+            case '\t':
+            case '\r':
+            case ' ':
+                current += 1;  // Skip whitespace.
+            break;
             case '+': {
                 current += add_single_token(&lexer, current, Token_Plus);
             } break;
@@ -279,7 +277,6 @@ TokenArray lexer_lex(Str name, Str source) {
             case '/': {
                 if (*(current+1) == '/') {
                     current = parse_line_comment(current);
-                    goto retry;
                 } else if (*(current+1) == '*') {
                     current = parse_block_comment(current);
                 } else {

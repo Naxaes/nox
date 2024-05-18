@@ -1,12 +1,11 @@
-#include "assert.h"
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "allocator.h"
 #include "generator.h"
 #include "../parser/visitor.h"
 #include "disassembler.h"
 #include "logger.h"
-
-#include <stdlib.h>
-#include <stdio.h>
-
 
 #define BP 0
 #define SP 1
@@ -183,6 +182,8 @@ Register generate_literal(Generator* generator, const NodeLiteral* literal) {
         default:
             assert(0 && "Invalid literal type");
     }
+
+    return -1;
 }
 
 // Adds 1 scratch register.
@@ -376,6 +377,8 @@ Register generate_call(Generator* generator, const NodeCall* fn_call) {
         }
     }
     assert(0 && "Unknown function");
+
+    return -1;
 }
 
 Register generate_fun_param(Generator* generator, const NodeFunParam* node) {
@@ -448,7 +451,7 @@ Register generate_fun_decl(Generator* generator, const NodeFunDecl* fun_decl) {
     generator->deferred_blocks[generator->deferred_blocks_count++] = (DeferredBlock) {
         .name = fun_decl->name,
         .node = (Node*) fun_decl,
-        .references = malloc(sizeof(Instruction*) * 12),
+        .references = alloc(0, sizeof(Instruction*) * 12),
         .references_count = 0,
     };
     return -1;
@@ -494,14 +497,14 @@ Bytecode generate_code(TypedAst ast) {
         },
 #undef X
         .ast = ast,
-        .instructions = malloc(sizeof(Instruction) * 1024),
+        .instructions = alloc(0, sizeof(Instruction) * 1024),
         .count = 0,
         .fun_block = 0,
         .current_register = REG_BASE,
-        .return_statements = malloc(sizeof(Instruction*) * 1024),
+        .return_statements = alloc(0, sizeof(Instruction*) * 1024),
         .return_statements_count = 0,
         .current = ast.block,
-        .deferred_blocks = malloc(sizeof(DeferredBlock) * 1024),
+        .deferred_blocks = alloc(0, sizeof(DeferredBlock) * 1024),
         .deferred_blocks_count = 0,
     };
 

@@ -1,10 +1,11 @@
-#include "interpreter.h"
-#include "code_generator/disassembler.h"
-#include "memory.h"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+
+#include "interpreter.h"
+#include "code_generator/disassembler.h"
+#include "allocator.h"
+
 
 
 #define STACK_MAX_SIZE 1024
@@ -13,12 +14,14 @@
 i64 interpret(Bytecode code) {
     Interpreter interpreter = {
         .ip = 0,
-        .stack = alloc(sizeof(u64) * STACK_MAX_SIZE),
+        .stack = alloc(0, sizeof(u64) * STACK_MAX_SIZE),
         .stack_size = 1024,
-        .registers = alloc(sizeof(u64) * REG_MAX_SIZE),
+        .registers = alloc(0, sizeof(u64) * REG_MAX_SIZE),
         .instructions = code.instructions,
         .instructions_size = code.size,
     };
+    memset(interpreter.stack, 0, sizeof(u64) * STACK_MAX_SIZE);
+    memset(interpreter.registers, 0, sizeof(u64) * REG_MAX_SIZE);
 
     while (interpreter.ip < interpreter.instructions_size) {
         Instruction instruction = interpreter.instructions[interpreter.ip];

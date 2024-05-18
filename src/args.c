@@ -76,6 +76,8 @@ int parse_dot(int argc, const char* const argv[], ArgCommands* commands) {
 }
 
 int parse_repl(int argc, const char* const argv[], ArgCommands* commands) {
+    (void)(argc);
+    (void)(argv);
     if (commands->mode == NO_RUN_MODE) {
         commands->mode = REPL;
     } else {

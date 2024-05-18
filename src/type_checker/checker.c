@@ -1,12 +1,11 @@
-#include "checker.h"
-#include "error.h"
-#include "memory.h"
-#include "../parser/visitor.h"
-
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
 
+#include "allocator.h"
+#include "checker.h"
+#include "error.h"
+#include "../parser/visitor.h"
 
 void typed_ast_free(TypedAst ast) {
     free(ast.nodes);
@@ -52,7 +51,7 @@ static Block* push_block(Checker* checker, const NodeBlock* block) {
     Block* current = checker->current;
     Block* x = checker->blocks + block->id;
     if (x->locals == NULL) {
-        x->locals = (Local *) malloc(1024 * sizeof(Local));
+        x->locals = (Local *) alloc(0, 1024 * sizeof(Local));
         x->count = 0;
         x->parent = block->parent;
     }
@@ -398,11 +397,12 @@ TypedAst type_check(GrammarTree ast) {
     Checker checker = {
         .visitor = visitor,
         .ast = ast,
-        .blocks = (Block*) alloc((ast.block_count + 1) * sizeof(Block)),
+        .blocks = (Block*) alloc(0, (ast.block_count + 1) * sizeof(Block)),
         .block_count = 0,
         .current = NULL,
         .current_function = NULL,
     };
+    memset(checker.blocks, 0, (ast.block_count + 1) * sizeof(Block));
 
     TypeId type = (TypeId) visit(&checker.visitor, node);
 

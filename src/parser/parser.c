@@ -1,10 +1,10 @@
-#include "parser.h"
-#include "error.h"
-#include "logger.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+
+#include "parser.h"
+#include "error.h"
+#include "allocator.h"
 
 
 
@@ -791,18 +791,18 @@ static Node* statement(Parser* parser) {
 }
 
 
-GrammarTree parse(const TokenArray tokens) {
+GrammarTree parse(TokenArray tokens) {
     Parser parser = {
         .tokens = tokens,
         .token_index = 0,
-        .stack = (Node**) malloc(1024 * sizeof(Node*)),
+        .stack = (Node**) alloc(0, 1024 * sizeof(Node*)),
         .stack_count = 0,
         .current_block = NULL,
         .current_decl_count = 0,
         .block_count = 0,
-        .nodes = (Node*) malloc(1024 * sizeof(Node)),
+        .nodes = (Node*) alloc(0, 1024 * sizeof(Node)),
         .node_count = 0,
-        .views = (Node**) malloc(1024 * sizeof(Node*)),
+        .views = (Node**) alloc(0, 1024 * sizeof(Node*)),
         .view_count = 0,
     };
 
